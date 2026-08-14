@@ -1,0 +1,28 @@
+{
+  "name": "gsus0112-proyecto-curso-aie-pt-3",
+  "version": "1.0.0",
+  "description": "[![4Geeks Academy](https://img.shields.io/badge/4Geeks-Academy-blue)](https://4geeksacademy.com) [![AI Engineering](https://img.shields.io/badge/track-AI%20Engineering-green)](https://4geeksacademy.com/es/programas-de-carrera/ingenieria-ia)",
+  "main": "validation.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/4GeeksAcademy/Gsus0112-proyecto-curso-aie-pt-3.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/4GeeksAcademy/Gsus0112-proyecto-curso-aie-pt-3/issues"
+  },
+  "homepage": "https://github.com/4GeeksAcademy/Gsus0112-proyecto-curso-aie-pt-3#readme",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
