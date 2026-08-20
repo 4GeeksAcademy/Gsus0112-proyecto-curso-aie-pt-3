@@ -9,7 +9,10 @@ export const findCarrierByIdLinear = (carriers: Carrier[], targetId: string): Ca
     return null;
 };
 
-export const findReturnByIdBinary = (sortedReturns: ReturnItem[], targetId: string): number => {
+/**
+ * Busca el indice de un retorno por ID en un arreglo ordenado.
+ */
+export const findReturnIndexBinary = (sortedReturns: ReturnItem[], targetId: string): number => {
     if (sortedReturns.length === 0) return -1;
     let left = 0;
     let right = sortedReturns.length - 1;
@@ -21,4 +24,11 @@ export const findReturnByIdBinary = (sortedReturns: ReturnItem[], targetId: stri
         else right = mid - 1;
     }
     return -1;
+};
+
+/**
+ * Compatibilidad con llamadas existentes: retorna el indice o -1.
+ */
+export const findReturnByIdBinary = (sortedReturns: ReturnItem[], targetId: string): number => {
+    return findReturnIndexBinary(sortedReturns, targetId);
 };

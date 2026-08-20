@@ -44,4 +44,52 @@ export const findCheapestCarrier = (carriers) => {
         return null;
     return carriers.reduce((cheapest, current) => current.costPerKg < cheapest.costPerKg ? current : cheapest);
 };
+/**
+ * Retorna el envio con mayor shippingCost.
+ */
+export const findMaxShippingCost = (shipments) => {
+    if (shipments.length === 0)
+        return null;
+    return shipments.reduce((max, current) => current.shippingCost > max.shippingCost ? current : max);
+};
+/**
+ * Retorna el envio con menor shippingCost.
+ */
+export const findMinShippingCost = (shipments) => {
+    if (shipments.length === 0)
+        return null;
+    return shipments.reduce((min, current) => current.shippingCost < min.shippingCost ? current : min);
+};
+/**
+ * Retorna el articulo con mayor cantidad de inventario.
+ */
+export const findMaxInventoryStock = (items) => {
+    if (items.length === 0)
+        return null;
+    return items.reduce((max, current) => current.quantity > max.quantity ? current : max);
+};
+/**
+ * Retorna el articulo con menor cantidad de inventario.
+ */
+export const findMinInventoryStock = (items) => {
+    if (items.length === 0)
+        return null;
+    return items.reduce((min, current) => current.quantity < min.quantity ? current : min);
+};
+/**
+ * Retorna el cliente B2B con mayor MRR.
+ */
+export const findMaxMRRClient = (clients) => {
+    if (clients.length === 0)
+        return null;
+    return clients.reduce((max, current) => current.mrr > max.mrr ? current : max);
+};
+/**
+ * Retorna el cliente B2B con menor MRR.
+ */
+export const findMinMRRClient = (clients) => {
+    if (clients.length === 0)
+        return null;
+    return clients.reduce((min, current) => current.mrr < min.mrr ? current : min);
+};
 //# sourceMappingURL=transformations.js.map

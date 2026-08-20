@@ -8,7 +8,10 @@ export const findCarrierByIdLinear = (carriers, targetId) => {
     }
     return null;
 };
-export const findReturnByIdBinary = (sortedReturns, targetId) => {
+/**
+ * Busca el indice de un retorno por ID en un arreglo ordenado.
+ */
+export const findReturnIndexBinary = (sortedReturns, targetId) => {
     if (sortedReturns.length === 0)
         return -1;
     let left = 0;
@@ -24,5 +27,11 @@ export const findReturnByIdBinary = (sortedReturns, targetId) => {
             right = mid - 1;
     }
     return -1;
+};
+/**
+ * Compatibilidad con llamadas existentes: retorna el indice o -1.
+ */
+export const findReturnByIdBinary = (sortedReturns, targetId) => {
+    return findReturnIndexBinary(sortedReturns, targetId);
 };
 //# sourceMappingURL=search.js.map

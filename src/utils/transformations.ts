@@ -1,4 +1,12 @@
-import type { Carrier, ReturnItem, ReturnStatus, Client } from '../types/models.js';
+import type {
+    Carrier,
+    ReturnItem,
+    ReturnStatus,
+    Client,
+    Shipment,
+    InventoryItem,
+    B2BClient,
+} from '../types/models.js';
 
 export const calculateAverageOnTimeRate = (carriers: Carrier[]): number => {
     if (carriers.length === 0) return 0;
@@ -52,4 +60,64 @@ export const findBestPerformingCarrier = (carriers: Carrier[]): Carrier | null =
 export const findCheapestCarrier = (carriers: Carrier[]): Carrier | null => {
     if (carriers.length === 0) return null;
     return carriers.reduce((cheapest, current) => current.costPerKg < cheapest.costPerKg ? current : cheapest);
+};
+
+/**
+ * Retorna el envio con mayor shippingCost.
+ */
+export const findMaxShippingCost = (shipments: Shipment[]): Shipment | null => {
+    if (shipments.length === 0) return null;
+    return shipments.reduce((max, current) =>
+        current.shippingCost > max.shippingCost ? current : max,
+    );
+};
+
+/**
+ * Retorna el envio con menor shippingCost.
+ */
+export const findMinShippingCost = (shipments: Shipment[]): Shipment | null => {
+    if (shipments.length === 0) return null;
+    return shipments.reduce((min, current) =>
+        current.shippingCost < min.shippingCost ? current : min,
+    );
+};
+
+/**
+ * Retorna el articulo con mayor cantidad de inventario.
+ */
+export const findMaxInventoryStock = (items: InventoryItem[]): InventoryItem | null => {
+    if (items.length === 0) return null;
+    return items.reduce((max, current) =>
+        current.quantity > max.quantity ? current : max,
+    );
+};
+
+/**
+ * Retorna el articulo con menor cantidad de inventario.
+ */
+export const findMinInventoryStock = (items: InventoryItem[]): InventoryItem | null => {
+    if (items.length === 0) return null;
+    return items.reduce((min, current) =>
+        current.quantity < min.quantity ? current : min,
+    );
+};
+
+/**
+ * Retorna el cliente B2B con mayor MRR.
+ */
+export const findMaxMRRClient = (clients: B2BClient[]): B2BClient | null => {
+    if (clients.length === 0) return null;
+    return clients.reduce((max, current) =>
+        current.mrr > max.mrr ? current : max,
+    );
+};
+
+/**
+ * Retorna el cliente B2B con menor MRR.
+ */
+export const findMinMRRClient = (clients: B2BClient[]): B2BClient | null => {
+    if (clients.length === 0) return null;
+    return clients.reduce((min, current) =>
+        current.mrr < min.mrr ? current : min,
+    );
 };

@@ -22,7 +22,22 @@ export interface Client {
     id: string;
     companyName: string;
     monthlyVolume: number;
+    mrr: number;
     daysToContractExpiration: number;
+}
+
+export interface Shipment {
+    id: string;
+    carrierId: string;
+    country: Country;
+    shippingCost: number;
+    urgency: 'low' | 'medium' | 'high';
+}
+
+export interface InventoryItem {
+    sku: string;
+    warehouse: 'LA' | 'ZARAGOZA';
+    quantity: number;
 }
 
 export type B2BClient = Client;
