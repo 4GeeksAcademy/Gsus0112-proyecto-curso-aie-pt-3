@@ -1,71 +1,55 @@
-import type { Carrier, ReturnItem, B2BClient } from '../types/models.js';
+import type { Carrier, ReturnItem, ReturnStatus, Client } from '../types/models.js';
 
-export function calculateAverageOnTimeRate(carriers: Carrier[]): number {
-  if (carriers.length === 0) {
-    return 0;
-  }
+export const calculateAverageOnTimeRate = (carriers: Carrier[]): number => {
+    if (carriers.length === 0) return 0;
+    const totalRate = carriers.reduce((sum, carrier) => sum + carrier.onTimeDeliveryRate, 0);
+    return totalRate / carriers.length;
+};
 
-  const rates = carriers.map((carrier) => carrier.onTimeDeliveryRate);
-  const total = rates.reduce((sum, rate) => sum + rate, 0);
+export const countReturnsByStatus = (returns: ReturnItem[]): Record<ReturnStatus, number> => {
+    return returns.reduce(
+        (acc, item) => {
+            acc[item.status] += 1;
+            return acc;
+        },
+        {
+            pending: 0,
+            approved: 0,
+            rejected: 0,
+        },
+    );
+};
 
-  return total / rates.length;
-}
+export const getClientsAtRisk = (clients: Client[], thresholdDays: number): Client[] => {
+    if (clients.length === 0) return [];
+    return clients.filter(client => client.daysToContractExpiration <= thresholdDays);
+};
 
-export function countReturnsByStatus(
-  returns: ReturnItem[],
-): Record<string, number> {
-  return returns.reduce<Record<string, number>>(
-    (acc, item) => {
-      acc[item.status] = (acc[item.status] ?? 0) + 1;
-      return acc;
-    },
-    {
-      pending: 0,
-      approved: 0,
-      rejected: 0,
-    },
-  );
-}
+export const calculateTotalMonthlyVolume = (clients: Client[]): number => {
+    if (clients.length === 0) return 0;
+    return clients.reduce((total, client) => total + client.monthlyVolume, 0);
+};
 
-export function getClientsAtRisk(
-  clients: B2BClient[],
-  thresholdDays: number,
-): B2BClient[] {
-  return clients.filter(
-    (client) => client.daysToContractExpiration <= thresholdDays,
-  );
-}
+export const findHighestMonthlyVolumeClient = (clients: Client[]): Client | null => {
+    if (clients.length === 0) return null;
+    return clients.reduce((highest, current) =>
+        current.monthlyVolume > highest.monthlyVolume ? current : highest,
+    );
+};
 
-export function calculateTotalMonthlyVolume(clients: B2BClient[]): number {
-  if (clients.length === 0) {
-    return 0;
-  }
+export const findLowestMonthlyVolumeClient = (clients: Client[]): Client | null => {
+    if (clients.length === 0) return null;
+    return clients.reduce((lowest, current) =>
+        current.monthlyVolume < lowest.monthlyVolume ? current : lowest,
+    );
+};
 
-  return clients.reduce((total, client) => total + client.monthlyVolume, 0);
-}
+export const findBestPerformingCarrier = (carriers: Carrier[]): Carrier | null => {
+    if (carriers.length === 0) return null;
+    return carriers.reduce((best, current) => current.onTimeDeliveryRate > best.onTimeDeliveryRate ? current : best);
+};
 
-export function findBestPerformingCarrier(
-  carriers: Carrier[],
-): Carrier | null {
-  if (carriers.length === 0) {
-    return null;
-  }
-
-  return carriers.reduce((bestCarrier, currentCarrier) =>
-    currentCarrier.onTimeDeliveryRate > bestCarrier.onTimeDeliveryRate
-      ? currentCarrier
-      : bestCarrier,
-  );
-}
-
-export function findCheapestCarrier(carriers: Carrier[]): Carrier | null {
-  if (carriers.length === 0) {
-    return null;
-  }
-
-  return carriers.reduce((cheapestCarrier, currentCarrier) =>
-    currentCarrier.costPerKg < cheapestCarrier.costPerKg
-      ? currentCarrier
-      : cheapestCarrier,
-  );
-}
+export const findCheapestCarrier = (carriers: Carrier[]): Carrier | null => {
+    if (carriers.length === 0) return null;
+    return carriers.reduce((cheapest, current) => current.costPerKg < cheapest.costPerKg ? current : cheapest);
+};

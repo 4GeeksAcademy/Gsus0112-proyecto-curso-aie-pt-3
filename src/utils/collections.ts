@@ -1,68 +1,31 @@
-import type {
-  Carrier,
-  ReturnItem,
-  Country,
-  ReturnStatus,
-} from '../types/models.js';
+import type { Carrier, ReturnItem, Country } from '../types/models.js';
 
-export function filterReturnsByCountry(
-  returns: ReturnItem[],
-  country: Country,
-): ReturnItem[] {
-  if (returns.length === 0) {
-    return [];
-  }
+export const filterReturnsByCountry = (returns: ReturnItem[], country: Country): ReturnItem[] => {
+    if (returns.length === 0) return [];
+    return returns.filter(item => item.country === country);
+};
 
-  return returns.filter((item) => item.country === country);
-}
+export const sortCarriersByCost = (carriers: Carrier[], order: 'asc' | 'desc' = 'asc'): Carrier[] => {
+    if (carriers.length === 0) return [];
+    return [...carriers].sort((a, b) => {
+        if (order === 'asc') return a.costPerKg - b.costPerKg;
+        return b.costPerKg - a.costPerKg;
+    });
+};
 
-export function sortCarriersByCost(
-  carriers: Carrier[],
-  order: 'asc' | 'desc' = 'asc',
-): Carrier[] {
-  const sorted = [...carriers].sort((a, b) => a.costPerKg - b.costPerKg);
+export const filterReturns = (returns: ReturnItem[], country?: Country, status?: ReturnItem['status']): ReturnItem[] => {
+    if (returns.length === 0) return [];
+    return returns.filter(item => {
+        const matchCountry = country ? item.country === country : true;
+        const matchStatus = status ? item.status === status : true;
+        return matchCountry && matchStatus;
+    });
+};
 
-  return order === 'desc' ? sorted.reverse() : sorted;
-}
-
-export function filterReturns(
-  returns: ReturnItem[],
-  criteria: {
-    country?: Country;
-    status?: ReturnStatus;
-  } = {},
-): ReturnItem[] {
-  if (returns.length === 0) {
-    return [];
-  }
-
-  const { country, status } = criteria;
-
-  return returns.filter((item) => {
-    if (country !== undefined && item.country !== country) {
-      return false;
-    }
-
-    if (status !== undefined && item.status !== status) {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-export function sortCarriers(
-  carriers: Carrier[],
-  field: 'costPerKg' | 'onTimeDeliveryRate',
-  order: 'asc' | 'desc' = 'asc',
-): Carrier[] {
-  if (carriers.length === 0) {
-    return [];
-  }
-
-  const direction = order === 'asc' ? 1 : -1;
-
-  return [...carriers].sort(
-    (a, b) => (a[field] - b[field]) * direction,
-  );
-}
+export const sortCarriers = (carriers: Carrier[], sortBy: 'costPerKg' | 'onTimeDeliveryRate', order: 'asc' | 'desc' = 'asc'): Carrier[] => {
+    if (carriers.length === 0) return [];
+    return [...carriers].sort((a, b) => {
+        if (order === 'asc') return a[sortBy] - b[sortBy];
+        return b[sortBy] - a[sortBy];
+    });
+};

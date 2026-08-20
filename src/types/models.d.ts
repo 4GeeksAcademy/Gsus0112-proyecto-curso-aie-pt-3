@@ -15,10 +15,11 @@ export interface ReturnItem {
     status: ReturnStatus;
     condition: ReturnCondition;
 }
-export interface B2BClient {
+export interface Client {
     id: string;
     companyName: string;
     monthlyVolume: number;
     daysToContractExpiration: number;
 }
+export type B2BClient = Client;
 //# sourceMappingURL=models.d.ts.map
