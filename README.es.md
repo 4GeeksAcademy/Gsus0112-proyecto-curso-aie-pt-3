@@ -28,6 +28,13 @@ Este repositorio es la **plantilla de inicio** para los proyectos transversales.
 5. **Empieza a implementar** en la carpeta correcta — no tires todo en la raíz.
 6. **Documenta** lo que añadas: cada app, servicio, agente o pipeline nuevo lleva subcarpeta + README.
 
+## Validación de TypeScript
+
+Ejecuta uno de estos comandos desde la raíz del repositorio para validar TypeScript sin generar archivos:
+
+- `npm run typecheck`
+- `npx tsc --noEmit`
+
 ---
 
 ## Cómo entender este monorepo

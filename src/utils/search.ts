@@ -21,9 +21,9 @@ export function findCarrierByIdLinear(
 export function findReturnByIdBinary(
   sortedReturns: ReturnItem[],
   targetId: string,
-): ReturnItem | null {
+): number {
   if (sortedReturns.length === 0) {
-    return null;
+    return -1;
   }
 
   let left = 0;
@@ -35,7 +35,7 @@ export function findReturnByIdBinary(
     const currentId = item.id;
 
     if (currentId === targetId) {
-      return item;
+      return mid;
     }
 
     if (currentId < targetId) {
@@ -45,5 +45,5 @@ export function findReturnByIdBinary(
     }
   }
 
-  return null;
+  return -1;
 }

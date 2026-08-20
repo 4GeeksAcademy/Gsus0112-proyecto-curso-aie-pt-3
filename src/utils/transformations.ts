@@ -35,3 +35,37 @@ export function getClientsAtRisk(
     (client) => client.daysToContractExpiration <= thresholdDays,
   );
 }
+
+export function calculateTotalMonthlyVolume(clients: B2BClient[]): number {
+  if (clients.length === 0) {
+    return 0;
+  }
+
+  return clients.reduce((total, client) => total + client.monthlyVolume, 0);
+}
+
+export function findBestPerformingCarrier(
+  carriers: Carrier[],
+): Carrier | null {
+  if (carriers.length === 0) {
+    return null;
+  }
+
+  return carriers.reduce((bestCarrier, currentCarrier) =>
+    currentCarrier.onTimeDeliveryRate > bestCarrier.onTimeDeliveryRate
+      ? currentCarrier
+      : bestCarrier,
+  );
+}
+
+export function findCheapestCarrier(carriers: Carrier[]): Carrier | null {
+  if (carriers.length === 0) {
+    return null;
+  }
+
+  return carriers.reduce((cheapestCarrier, currentCarrier) =>
+    currentCarrier.costPerKg < cheapestCarrier.costPerKg
+      ? currentCarrier
+      : cheapestCarrier,
+  );
+}

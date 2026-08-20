@@ -12,7 +12,7 @@ export function findCarrierByIdLinear(carriers, targetId) {
 }
 export function findReturnByIdBinary(sortedReturns, targetId) {
     if (sortedReturns.length === 0) {
-        return null;
+        return -1;
     }
     let left = 0;
     let right = sortedReturns.length - 1;
@@ -21,7 +21,7 @@ export function findReturnByIdBinary(sortedReturns, targetId) {
         const item = sortedReturns[mid];
         const currentId = item.id;
         if (currentId === targetId) {
-            return item;
+            return mid;
         }
         if (currentId < targetId) {
             left = mid + 1;
@@ -30,6 +30,6 @@ export function findReturnByIdBinary(sortedReturns, targetId) {
             right = mid - 1;
         }
     }
-    return null;
+    return -1;
 }
 //# sourceMappingURL=search.js.map

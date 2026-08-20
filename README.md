@@ -28,6 +28,13 @@ This repository is the **starter template** for transversal projects. You will w
 5. **Start implementing** in the right folder — do not dump everything in the root.
 6. **Document** what you add: each new app, service, agent, or pipeline gets a subfolder + README.
 
+## TypeScript validation
+
+Run one of these commands from the repository root to validate TypeScript without emitting files:
+
+- `npm run typecheck`
+- `npx tsc --noEmit`
+
 ---
 
 ## How to think about this monorepo
