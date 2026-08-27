@@ -61,7 +61,7 @@ export default function FilterBar({ initialStatus, initialStage, initialSearch =
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           Estado
@@ -72,7 +72,7 @@ export default function FilterBar({ initialStatus, initialStage, initialSearch =
               setStatusValue(nextValue);
               updateParam('status', nextValue);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-sky-500"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-sky-500"
           >
             <option value="">Todos</option>
             {STATUS_OPTIONS.map((option) => (
@@ -92,7 +92,7 @@ export default function FilterBar({ initialStatus, initialStage, initialSearch =
               setStageValue(nextValue);
               updateParam('stage', nextValue);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-sky-500"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-sky-500"
           >
             <option value="">Todos</option>
             {STAGE_OPTIONS.map((option) => (
@@ -105,17 +105,20 @@ export default function FilterBar({ initialStatus, initialStage, initialSearch =
 
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           Buscar por nombre o email
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setSearchValue(nextValue);
-              updateParam('search', nextValue.trim());
-            }}
-            placeholder="Ej. Ana Martinez o ana@trackflow.com"
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-sky-500"
-          />
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setSearchValue(nextValue);
+                updateParam('search', nextValue.trim());
+              }}
+              placeholder="Buscar por nombre o email"
+              className="w-full rounded-lg border border-slate-300 bg-white py-3 pr-4 pl-10 text-sm text-slate-900 outline-none ring-0 focus:border-sky-500"
+            />
+          </div>
         </label>
       </div>
     </div>

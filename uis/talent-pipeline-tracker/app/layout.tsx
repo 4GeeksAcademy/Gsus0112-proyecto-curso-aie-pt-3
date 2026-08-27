@@ -22,7 +22,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="es" className="h-full">
       <body className={`${inter.className} min-h-full bg-slate-50 text-slate-900 antialiased`}>
-        <header className="border-b border-slate-200 bg-white">
+        <header className="border-b border-slate-200 bg-white shadow-sm">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 md:px-8">
             <p className="text-lg font-medium text-slate-800">
               <span className="font-bold text-teal-600">TrackFlow</span> | People & Talent

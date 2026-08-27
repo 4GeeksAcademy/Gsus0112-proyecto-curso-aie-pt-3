@@ -43,57 +43,28 @@ export default function CandidateTable({ candidates }: CandidateTableProps) {
   const safeCandidates = Array.isArray(candidates) ? candidates : [];
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full text-sm text-slate-700">
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-4 py-3">Nombre Completo</th>
-            <th className="px-4 py-3">Puesto</th>
-            <th className="px-4 py-3">Estado</th>
-            <th className="px-4 py-3">Etapa</th>
-            <th className="px-4 py-3">Fecha de Aplicación</th>
-          </tr>
-        </thead>
-        <tbody>
-          {safeCandidates.map((candidate) => (
-            <tr key={candidate.id} className="border-t border-slate-100 transition-colors hover:bg-slate-50">
-              <td className="px-4 py-3 font-medium text-slate-900">
-                <Link href={`/candidates/${candidate.id}`} className="block focus:outline-none focus-visible:underline">
-                  {candidate.full_name}
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <Link href={`/candidates/${candidate.id}`} className="block focus:outline-none focus-visible:underline">
-                  {candidate.position}
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <Link href={`/candidates/${candidate.id}`} className="block focus:outline-none">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeStyles[candidate.status]}`}
-                  >
-                    {STATUS_LABELS[candidate.status]}
-                  </span>
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <Link href={`/candidates/${candidate.id}`} className="block focus:outline-none">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stageBadgeStyles[candidate.stage]}`}
-                  >
-                    {STAGE_LABELS[candidate.stage]}
-                  </span>
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <Link href={`/candidates/${candidate.id}`} className="block focus:outline-none focus-visible:underline">
-                  {formatAppliedDate(candidate.applied_at)}
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {safeCandidates.map((candidate) => (
+        <Link
+          key={candidate.id}
+          href={`/candidates/${candidate.id}`}
+          className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+        >
+          <h3 className="text-lg font-bold text-slate-900 transition-colors group-hover:text-teal-700">{candidate.full_name}</h3>
+          <p className="mt-1 text-sm text-slate-500">{candidate.position}</p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeStyles[candidate.status]}`}>
+              {STATUS_LABELS[candidate.status]}
+            </span>
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stageBadgeStyles[candidate.stage]}`}>
+              {STAGE_LABELS[candidate.stage]}
+            </span>
+          </div>
+
+          <p className="mt-4 text-xs text-slate-500">Aplicó el {formatAppliedDate(candidate.applied_at)}</p>
+        </Link>
+      ))}
     </div>
   );
 }

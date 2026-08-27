@@ -22,6 +22,9 @@ type CandidateFormValues = {
   cv_url: string;
 };
 
+type CandidateFormField = keyof CandidateFormValues;
+type CandidateFormErrors = Partial<Record<CandidateFormField, string>>;
+
 const EMPTY_FORM: CandidateFormValues = {
   full_name: '',
   email: '',
@@ -61,6 +64,7 @@ export default function CandidateFormModal({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CandidateFormErrors>({});
 
   useEffect(() => {
     if (!isOpen) {
@@ -83,6 +87,7 @@ export default function CandidateFormModal({
 
     setErrorMessage(null);
     setSuccessMessage(null);
+    setFieldErrors({});
   }, [candidateToEdit, isOpen]);
 
   useEffect(() => {
@@ -117,39 +122,62 @@ export default function CandidateFormModal({
       ...previous,
       [field]: value,
     }));
+
+    setFieldErrors((previous) => {
+      if (!previous[field]) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [field]: undefined,
+      };
+    });
   };
 
-  const validateForm = (): string | null => {
+  const getFieldClassName = (field: CandidateFormField): string => {
+    const hasError = Boolean(fieldErrors[field]);
+
+    return `rounded-md border px-3 py-2 text-slate-900 outline-none ${
+      hasError
+        ? 'border-rose-500 bg-rose-50 focus:border-rose-600'
+        : 'border-slate-300 bg-white focus:border-sky-500'
+    }`;
+  };
+
+  const validateForm = (): CandidateFormErrors => {
+    const errors: CandidateFormErrors = {};
+
     if (formValues.full_name.trim().length < 2) {
-      return 'El nombre completo debe tener al menos 2 caracteres.';
+      errors.full_name = 'El nombre completo debe tener al menos 2 caracteres.';
     }
 
     if (!isValidEmail(formValues.email.trim())) {
-      return 'El email no tiene un formato válido.';
+      errors.email = 'El email no tiene un formato válido.';
     }
 
     if (!formValues.phone.trim()) {
-      return 'El teléfono es obligatorio.';
+      errors.phone = 'El teléfono es obligatorio.';
     }
 
     if (!formValues.position.trim()) {
-      return 'Debes seleccionar un puesto.';
+      errors.position = 'Debes seleccionar un puesto.';
     }
 
     const experience = Number(formValues.experience_years);
     if (!Number.isFinite(experience) || experience < 0) {
-      return 'Los años de experiencia deben ser un número mayor o igual a 0.';
+      errors.experience_years = 'Los años de experiencia deben ser un número mayor o igual a 0.';
     }
 
     if (!isValidUrlOrEmpty(formValues.linkedin_url.trim())) {
-      return 'La URL de LinkedIn no es válida.';
+      errors.linkedin_url = 'La URL de LinkedIn no es válida.';
     }
 
     if (!isValidUrlOrEmpty(formValues.cv_url.trim())) {
-      return 'La URL del CV no es válida.';
+      errors.cv_url = 'La URL del CV no es válida.';
     }
 
-    return null;
+    return errors;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -157,11 +185,14 @@ export default function CandidateFormModal({
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const validationError = validateForm();
-    if (validationError) {
-      setErrorMessage(validationError);
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setErrorMessage('Revisa los campos marcados y corrige los requisitos.');
       return;
     }
+
+    setFieldErrors({});
 
     const payload: CandidateCreateInput = {
       full_name: formValues.full_name.trim(),
@@ -192,8 +223,14 @@ export default function CandidateFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      onClick={handleClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="border-b border-slate-200 px-6 py-4">
           <h2 className="text-xl font-semibold text-slate-900">
             {isEditMode ? 'Editar Candidatura' : 'Nueva Candidatura'}
@@ -201,7 +238,7 @@ export default function CandidateFormModal({
           <p className="mt-1 text-sm text-slate-600">Completa la información del perfil para el pipeline de TrackFlow.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+        <form noValidate onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm text-slate-700 md:col-span-2">
               Nombre Completo
@@ -211,8 +248,10 @@ export default function CandidateFormModal({
                 minLength={2}
                 value={formValues.full_name}
                 onChange={(event) => handleInputChange('full_name', event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.full_name)}
+                className={getFieldClassName('full_name')}
               />
+              {fieldErrors.full_name ? <p className="text-xs font-medium text-rose-600">{fieldErrors.full_name}</p> : null}
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -222,8 +261,10 @@ export default function CandidateFormModal({
                 required
                 value={formValues.email}
                 onChange={(event) => handleInputChange('email', event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={getFieldClassName('email')}
               />
+              {fieldErrors.email ? <p className="text-xs font-medium text-rose-600">{fieldErrors.email}</p> : null}
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -233,8 +274,10 @@ export default function CandidateFormModal({
                 required
                 value={formValues.phone}
                 onChange={(event) => handleInputChange('phone', event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.phone)}
+                className={getFieldClassName('phone')}
               />
+              {fieldErrors.phone ? <p className="text-xs font-medium text-rose-600">{fieldErrors.phone}</p> : null}
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -243,7 +286,8 @@ export default function CandidateFormModal({
                 required
                 value={formValues.position}
                 onChange={(event) => handleInputChange('position', event.target.value)}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.position)}
+                className={getFieldClassName('position')}
               >
                 <option value="">Selecciona un puesto</option>
                 {TRACKFLOW_POSITIONS.map((position) => (
@@ -252,6 +296,7 @@ export default function CandidateFormModal({
                   </option>
                 ))}
               </select>
+              {fieldErrors.position ? <p className="text-xs font-medium text-rose-600">{fieldErrors.position}</p> : null}
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -262,8 +307,12 @@ export default function CandidateFormModal({
                 min={0}
                 value={formValues.experience_years}
                 onChange={(event) => handleInputChange('experience_years', event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.experience_years)}
+                className={getFieldClassName('experience_years')}
               />
+              {fieldErrors.experience_years ? (
+                <p className="text-xs font-medium text-rose-600">{fieldErrors.experience_years}</p>
+              ) : null}
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -272,8 +321,10 @@ export default function CandidateFormModal({
                 type="url"
                 value={formValues.linkedin_url}
                 onChange={(event) => handleInputChange('linkedin_url', event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.linkedin_url)}
+                className={getFieldClassName('linkedin_url')}
               />
+              {fieldErrors.linkedin_url ? <p className="text-xs font-medium text-rose-600">{fieldErrors.linkedin_url}</p> : null}
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -282,8 +333,10 @@ export default function CandidateFormModal({
                 type="url"
                 value={formValues.cv_url}
                 onChange={(event) => handleInputChange('cv_url', event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-sky-500"
+                aria-invalid={Boolean(fieldErrors.cv_url)}
+                className={getFieldClassName('cv_url')}
               />
+              {fieldErrors.cv_url ? <p className="text-xs font-medium text-rose-600">{fieldErrors.cv_url}</p> : null}
             </label>
           </div>
 

@@ -86,17 +86,17 @@ function HomePageContent() {
   return (
     <div className="min-h-screen bg-slate-50">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-8">
-        <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+        <header className="flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-teal-600 to-sky-700 p-6 shadow-lg md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">TrackFlow - People & Talent Pipeline</h1>
-            <p className="mt-1 text-sm text-slate-600">Gestión de candidaturas para operaciones de logística B2B.</p>
+            <h1 className="text-2xl font-bold text-white md:text-3xl">TrackFlow — People & Talent Pipeline</h1>
+            <p className="mt-1 text-sm text-teal-50">Gestión de candidaturas para operaciones de logística B2B.</p>
           </div>
           <button
             type="button"
             onClick={() => {
               setIsCreateModalOpen(true);
             }}
-            className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow transition-colors hover:bg-sky-700"
+            className="inline-flex items-center justify-center rounded-lg border border-white/80 bg-white px-5 py-3 text-sm font-semibold text-teal-700 shadow transition-colors hover:bg-teal-50"
           >
             Nueva Candidatura
           </button>
