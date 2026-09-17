@@ -11,7 +11,7 @@ const departments = [
 /** Muestra las prioridades operativas y sus responsables. */
 export function OperationsPanel(): React.ReactElement {
   return (
-    <section className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section id="clientes" className="mt-8 scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-6 py-5">
         <span className="text-xs font-bold uppercase text-emerald-600">TrackFlow Tech</span>
         <h2 className="mt-1 text-xl font-bold text-slate-900">Estado de Departamentos</h2>

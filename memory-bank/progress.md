@@ -20,5 +20,6 @@
 
 ## Historial de cambios
 
+- **2026-09-17:** corregida la navegación por anchors del website y el backoffice, incluido el estado activo del sidebar y el desplazamiento suave.
 - **2026-09-17:** renovada por completo la estética del website y el backoffice con utilidades Tailwind, diseño responsive e identidad emerald/slate; corregida la resolución de componentes en Turbopack.
 - **2026-09-17:** completado el hito Ingeniería Impulsada por IA; creados el banco de memoria, las reglas, el skill de revisión y las primeras versiones del website y el backoffice.

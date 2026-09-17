@@ -18,7 +18,7 @@ const warehouses = [
 /** Resume el estado tecnológico de los almacenes de TrackFlow. */
 export function WarehouseHealth(): React.ReactElement {
   return (
-    <section className="mt-8">
+    <section id="almacenes" className="scroll-mt-6 pt-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div><span className="text-xs font-bold uppercase text-emerald-600">Infraestructura</span><h2 className="mt-1 text-xl font-bold text-slate-900">Estado de almacenes</h2></div>
         <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Visión global no disponible</span>

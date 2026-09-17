@@ -6,7 +6,7 @@ import { WarehouseHealth } from '@/src/components/WarehouseHealth';
 /** Renderiza el resumen operativo principal del backoffice. */
 export default function DashboardPage(): React.ReactElement {
   return (
-    <div className="min-h-screen bg-slate-50 md:pl-64">
+    <div id="resumen" className="min-h-screen scroll-mt-4 bg-slate-50 md:pl-64">
       <Sidebar />
       <main className="min-w-0">
         <header className="border-b border-slate-200 bg-white">
