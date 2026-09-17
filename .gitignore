@@ -1,6 +1,8 @@
 node_modules/
 dist/
+.next/
 *.js
 *.d.ts
 *.js.map
+*.tsbuildinfo
 .DS_Store
