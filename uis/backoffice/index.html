@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Incidencias | TrackFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "DM Sans", "Trebuchet MS", sans-serif;
+        color: #24312d;
+        background: #f5f7f6;
+        font-synthesis: none;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      [hidden] { display: none !important; }
+
+      .topbar {
+        background: #fff;
+        border-bottom: 1px solid #e1e8e4;
+      }
+      .topbar-inner {
+        max-width: 1160px;
+        min-height: 72px;
+        margin: auto;
+        padding: 12px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; font-family: Outfit, sans-serif; font-weight: 700; font-size: 20px; color: #193b32; }
+      .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; background: #147d61; color: #fff; border-radius: 6px; font-size: 14px; }
+      .topbar-meta { color: #60736b; font-size: 13px; font-weight: 600; }
+
+      main { max-width: 1160px; margin: auto; padding: 48px 28px 80px; }
+      .eyebrow { margin: 0 0 10px; color: #147d61; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1, h2, .metric-value { font-family: Outfit, sans-serif; }
+      h1 { margin-bottom: 12px; font-size: clamp(30px, 4vw, 42px); line-height: 1.14; }
+      h2 { font-size: 22px; line-height: 1.3; }
+      .intro { margin-bottom: 32px; color: #65776e; font-size: 16px; }
+
+      .drop-zone {
+        position: relative;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 36px 24px;
+        border: 2px dashed #91b8a8;
+        border-radius: 8px;
+        background: #fff;
+        text-align: center;
+        transition: border-color .2s, background .2s;
+      }
+      .drop-zone:hover, .drop-zone.is-dragging, .drop-zone:focus-within { border-color: #147d61; background: #f0f9f4; }
+      .drop-zone:focus-within { outline: 2px solid #147d61; outline-offset: 3px; }
+      .file-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+      .upload-symbol { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 8px; background: #e7f4ec; color: #147d61; font-family: Outfit, sans-serif; font-size: 36px; line-height: 1; }
+      .drop-title { margin: 0; font-family: Outfit, sans-serif; font-size: 20px; font-weight: 600; }
+      .drop-detail { margin: 0; color: #667a70; font-size: 14px; }
+      .browse { padding: 10px 18px; border-radius: 6px; background: #147d61; color: #fff; font-size: 14px; font-weight: 700; }
+      .drop-zone[aria-busy="true"] { opacity: .7; }
+      .feedback { margin: 18px 0 0; padding: 12px 16px; border-left: 3px solid #bd533b; background: #fff1ed; color: #872e1c; font-size: 14px; }
+      .feedback.is-loading { border-color: #147d61; background: #e7f4ec; color: #135a46; }
+
+      .results-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 28px; }
+      .results-heading h2 { margin-bottom: 5px; font-size: 28px; }
+      .file-name { max-width: 100%; margin-bottom: 0; overflow-wrap: anywhere; color: #60736b; font-size: 14px; }
+      .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+      .button { min-height: 42px; padding: 10px 18px; border: 1px solid transparent; border-radius: 6px; font-size: 14px; font-weight: 700; }
+      .button-primary { background: #147d61; color: #fff; }
+      .button-primary:hover { background: #0c604a; }
+      .button-secondary { background: #fff; border-color: #cad8d0; color: #275241; }
+      .button-secondary:hover { background: #edf5f0; }
+      .button:focus-visible { outline: 2px solid #147d61; outline-offset: 3px; }
+
+      .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 42px; }
+      .metric { min-width: 0; min-height: 156px; padding: 24px; border: 1px solid #e1e8e4; border-radius: 8px; background: #fff; }
+      .metric-label { margin-bottom: 18px; color: #64756c; font-size: 14px; font-weight: 600; }
+      .metric-value { margin: 0; color: #193b32; font-size: 40px; font-weight: 600; line-height: 1.1; overflow-wrap: anywhere; }
+      .metric-caption { margin: 8px 0 0; color: #7c8c82; font-size: 12px; }
+      .issues-heading { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+      .issues-heading h2 { margin: 0; }
+      .issue-count { color: #bd533b; font-family: Outfit, sans-serif; font-size: 16px; font-weight: 600; }
+      .issue-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid #dce4de; }
+      .issue-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 12px 4px; border-bottom: 1px solid #dce4de; }
+      .issue-name { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+      .issue-number { flex: none; min-width: 35px; padding: 4px 8px; border-radius: 4px; background: #f9e8e2; color: #a2412c; text-align: center; font-weight: 700; }
+      .empty { color: #60736b; }
+
+      @media (max-width: 700px) {
+        .topbar-inner { min-height: 64px; padding: 12px 20px; }
+        main { padding: 36px 20px 60px; }
+        .metrics { grid-template-columns: 1fr; gap: 10px; margin-bottom: 32px; }
+        .metric { min-height: 120px; padding: 18px 20px; }
+        .metric-label { margin-bottom: 10px; }
+        .metric-value { font-size: 34px; }
+        .actions { width: 100%; }
+        .button { flex: 1; }
+      }
+      @media (max-width: 380px) {
+        .topbar-meta { display: none; }
+        .actions { flex-direction: column; align-items: stretch; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">TF</span> TrackFlow</div>
+        <span class="topbar-meta">Operaciones / US · ES</span>
+      </div>
+    </header>
+
+    <main>
+      <p class="eyebrow">Centro de control / Incidencias</p>
+      <h1>Análisis de incidencias</h1>
+      <p class="intro">Control de calidad de los registros logísticos.</p>
+
+      <section id="upload-section" aria-label="Subir archivo CSV">
+        <div id="drop-zone" class="drop-zone">
+          <input id="file-input" class="file-input" type="file" accept=".csv,text/csv" aria-label="Seleccionar archivo CSV">
+          <span class="upload-symbol" aria-hidden="true">+</span>
+          <p class="drop-title">Arrastra tu archivo CSV aquí</p>
+          <p class="drop-detail">o haz clic para seleccionarlo</p>
+          <span class="browse" aria-hidden="true">Seleccionar CSV</span>
+        </div>
+        <p id="feedback" class="feedback" role="alert" hidden></p>
+      </section>
+
+      <section id="results-section" aria-label="Resultados del análisis" hidden>
+        <div class="results-heading">
+          <div>
+            <p class="eyebrow">Análisis completado</p>
+            <h2>Resumen de incidencias</h2>
+            <p id="file-name" class="file-name"></p>
+          </div>
+          <div class="actions">
+            <button id="reset-button" class="button button-secondary" type="button">Analizar otro archivo</button>
+            <button id="export-button" class="button button-primary" type="button">Descargar CSV</button>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><p class="metric-label">Total de registros</p><p id="total-records" class="metric-value">0</p><p class="metric-caption">Filas procesadas</p></div>
+          <div class="metric"><p class="metric-label">Registros válidos</p><p id="valid-records" class="metric-value">0</p><p class="metric-caption">Sin incidencias de validación</p></div>
+          <div class="metric"><p class="metric-label">Satisfacción promedio</p><p id="average-satisfaction" class="metric-value">—</p><p class="metric-caption">Puntuación sobre 5</p></div>
+        </div>
+
+        <div class="issues-heading">
+          <h2>Registros inválidos</h2>
+          <span id="invalid-count" class="issue-count">0</span>
+        </div>
+        <ul id="issue-list" class="issue-list"></ul>
+        <p id="no-issues" class="empty" hidden>No se encontraron registros inválidos.</p>
+      </section>
+    </main>
+
+    <script>
+      // En Codespaces, el puerto o la URL reenviada pueden cambiar.
+      const API_BASE_URL = "http://localhost:8000";
+      const uploadSection = document.getElementById("upload-section");
+      const resultsSection = document.getElementById("results-section");
+      const dropZone = document.getElementById("drop-zone");
+      const fileInput = document.getElementById("file-input");
+      const feedback = document.getElementById("feedback");
+      const issueList = document.getElementById("issue-list");
+      const reasonLabels = {
+        INVALID_COUNTRY: "País no permitido",
+        MISSING_CARRIER: "Transportista vacío",
+        CARRIER_COUNTRY_MISMATCH: "Transportista no válido para el país",
+        INVALID_TRACKING_NUMBER: "Número de seguimiento demasiado corto",
+        INVALID_CATEGORY: "Categoría no válida",
+        DESCRIPTION_TOO_SHORT: "Descripción demasiado corta",
+        INVALID_EMAIL: "Email sin arroba",
+        MISSING_SATISFACTION_SCORE: "Falta puntuación en incidencia cerrada",
+        INVALID_SATISFACTION_SCORE: "Puntuación fuera del rango 1–5"
+      };
+
+      function showFeedback(message, loading = false) {
+        feedback.textContent = message;
+        feedback.classList.toggle("is-loading", loading);
+        feedback.hidden = false;
+      }
+
+      function showResults(data, filename) {
+        document.getElementById("file-name").textContent = filename;
+        document.getElementById("total-records").textContent = data.total_records.toLocaleString("es-ES");
+        document.getElementById("valid-records").textContent = data.valid_records.toLocaleString("es-ES");
+        document.getElementById("average-satisfaction").textContent = data.average_satisfaction === null
+          ? "N/D" : `${data.average_satisfaction.toLocaleString("es-ES")} / 5`;
+        document.getElementById("invalid-count").textContent = data.invalid_records.toLocaleString("es-ES");
+
+        issueList.replaceChildren();
+        const reasons = Object.entries(data.invalid_reasons).sort((first, second) => second[1] - first[1]);
+        document.getElementById("no-issues").hidden = reasons.length !== 0;
+        for (const [reason, count] of reasons) {
+          const item = document.createElement("li");
+          const label = document.createElement("span");
+          const number = document.createElement("span");
+          label.className = "issue-name";
+          number.className = "issue-number";
+          label.textContent = reasonLabels[reason] || reason;
+          number.textContent = count.toLocaleString("es-ES");
+          item.append(label, number);
+          issueList.append(item);
+        }
+
+        uploadSection.hidden = true;
+        resultsSection.hidden = false;
+      }
+
+      async function analyzeFile(file) {
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith(".csv")) {
+          showFeedback("Selecciona un archivo con extensión .csv.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        fileInput.disabled = true;
+        dropZone.setAttribute("aria-busy", "true");
+        showFeedback("Analizando archivo...", true);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/incidents/analyze`, {
+            method: "POST",
+            body: formData
+          });
+          if (!response.ok) {
+            throw new Error(`El análisis no se completó (HTTP ${response.status}).`);
+          }
+          showResults(await response.json(), file.name);
+        } catch (error) {
+          showFeedback(error instanceof TypeError ? "No se pudo conectar con la API." : error.message);
+        } finally {
+          fileInput.disabled = false;
+          dropZone.removeAttribute("aria-busy");
+          fileInput.value = "";
+        }
+      }
+
+      fileInput.addEventListener("change", () => analyzeFile(fileInput.files[0]));
+      dropZone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dropZone.classList.add("is-dragging");
+      });
+      dropZone.addEventListener("dragleave", (event) => {
+        if (!dropZone.contains(event.relatedTarget)) dropZone.classList.remove("is-dragging");
+      });
+      dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("is-dragging");
+        if (!fileInput.disabled) analyzeFile(event.dataTransfer.files[0]);
+      });
+      document.getElementById("reset-button").addEventListener("click", () => {
+        resultsSection.hidden = true;
+        uploadSection.hidden = false;
+        feedback.hidden = true;
+        fileInput.focus();
+      });
+      document.getElementById("export-button").addEventListener("click", () => {
+        window.location.href = `${API_BASE_URL}/api/incidents/results/export`;
+      });
+    </script>
+  </body>
+</html>
