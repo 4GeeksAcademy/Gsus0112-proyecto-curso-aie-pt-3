@@ -2,6 +2,7 @@ import { KpiGrid } from '@/src/components/KpiGrid';
 import { OperationsPanel } from '@/src/components/OperationsPanel';
 import { Sidebar } from '@/src/components/Sidebar';
 import { WarehouseHealth } from '@/src/components/WarehouseHealth';
+import { IncidentsAnalysis } from '@/src/components/IncidentsAnalysis';
 
 /** Renderiza el resumen operativo principal del backoffice. */
 export default function DashboardPage(): React.ReactElement {
@@ -27,6 +28,7 @@ export default function DashboardPage(): React.ReactElement {
           <KpiGrid />
           <WarehouseHealth />
           <OperationsPanel />
+          <IncidentsAnalysis />
         </div>
       </main>
     </div>

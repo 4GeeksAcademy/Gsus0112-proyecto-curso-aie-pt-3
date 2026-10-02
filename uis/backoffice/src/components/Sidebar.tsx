@@ -7,6 +7,7 @@ const navigation = [
   { label: 'Almacenes', icon: '🏭', href: '#almacenes' },
   { label: 'Envíos', icon: '📦', href: '#envios' },
   { label: 'Devoluciones', icon: '🔄', href: '#devoluciones' },
+  { label: 'Incidencias', icon: '📁', href: '#incidencias' },
   { label: 'Clientes', icon: '👥', href: '#clientes' },
 ];
 
