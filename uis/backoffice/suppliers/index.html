@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Proveedores | TrackFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root { font-family: "DM Sans", "Trebuchet MS", sans-serif; color: #24312d; background: #f5f7f6; color-scheme: light; }
+      body { margin: 0; }
+      h1, h2, .brand { font-family: Outfit, sans-serif; }
+      * { box-sizing: border-box; letter-spacing: 0; }
+      [hidden] { display: none !important; }
+      input, button { font: inherit; }
+      label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+      .field { width: 100%; min-width: 0; height: 42px; border: 1px solid #cbd8d1; border-radius: 6px; padding: 8px 12px; background: white; }
+      .field::placeholder { color: #819088; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 9px 14px; border: 1px solid #cbd8d1; border-radius: 6px; background: white; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+      .button:hover { background: #edf5f0; }
+      .button-primary { background: #147d61; border-color: #147d61; color: white; }
+      .button-primary:hover { background: #0c604a; }
+      .icon-button { width: 42px; padding: 0; flex: none; }
+      button:disabled { cursor: wait; opacity: .55; }
+      :is(button, a, input):focus-visible { outline: 2px solid #147d61; outline-offset: 3px; }
+      .icon { width: 17px; height: 17px; flex: none; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; min-width: 1080px; border-collapse: collapse; font-size: 14px; }
+      th { padding: 14px 16px; color: #61746a; font-size: 12px; font-weight: 600; text-align: left; background: #f0f4f2; }
+      td { padding: 20px 16px; vertical-align: middle; border-bottom: 1px solid #e1e8e4; }
+      tbody tr:last-child td { border-bottom: 0; }
+      .supplier-name { max-width: 220px; overflow-wrap: anywhere; font-weight: 600; }
+      .categories { max-width: 190px; overflow-wrap: anywhere; color: #61746a; font-size: 13px; }
+      .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+      .badge-active { background: #e1f4e9; color: #146746; }
+      .badge-suspended { background: #fce9e6; color: #a23730; }
+      .rate-form { display: flex; align-items: center; gap: 8px; }
+      .rate-value { min-width: 48px; font-variant-numeric: tabular-nums; }
+      .rate-input { width: 90px; height: 38px; padding: 6px 8px; }
+      .row-button { min-height: 38px; padding: 7px 10px; font-size: 12px; }
+      .placeholder { padding: 52px 16px; text-align: center; color: #61746a; }
+      @media (prefers-reduced-motion: no-preference) { main { animation: appear .3s ease-out; } @keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } }
+    </style>
+  </head>
+  <body>
+    <header class="border-b border-[#e1e8e4] bg-white">
+      <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
+        <a href="../index.html" class="brand flex items-center gap-3 text-xl font-bold text-[#193b32]">
+          <span class="flex h-9 w-9 items-center justify-center rounded-md bg-[#147d61] text-white" aria-hidden="true"><i data-lucide="truck" class="h-5 w-5"></i></span>
+          TrackFlow
+        </a>
+        <nav aria-label="Backoffice" class="flex items-center gap-5 text-sm">
+          <a href="../index.html" class="text-[#61746a] hover:text-[#147d61]">Incidencias</a>
+          <a href="./index.html" aria-current="page" class="font-semibold text-[#147d61]">Proveedores</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-5 pb-16 pt-9 sm:px-8 sm:pt-12">
+      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="mb-2 text-xs font-semibold uppercase text-[#147d61]">Operaciones / Compras</p>
+          <h1 class="text-3xl font-semibold text-[#193b32] sm:text-4xl">Proveedores</h1>
+        </div>
+        <span class="text-sm text-[#61746a]">Estados Unidos · España</span>
+      </div>
+
+      <p id="error-message" role="alert" class="mb-5 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" hidden></p>
+      <p id="success-message" role="status" class="mb-5 border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" hidden></p>
+
+      <section aria-labelledby="new-supplier-heading" class="border-y border-[#dce5df] bg-white py-6">
+        <h2 id="new-supplier-heading" class="mb-5 text-xl font-semibold">Nuevo Proveedor</h2>
+        <form id="supplier-form">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_2fr_1fr]">
+            <div class="min-w-0"><label for="supplier-name">Nombre</label><input id="supplier-name" name="name" class="field" placeholder="Nombre comercial" autocomplete="organization" required></div>
+            <div class="min-w-0"><label for="supplier-country">País</label><input id="supplier-country" name="country" class="field" placeholder="ES o US" maxlength="2" autocomplete="country" required></div>
+            <div class="min-w-0"><label for="supplier-categories">Categorías (separadas por coma)</label><input id="supplier-categories" name="categories" class="field" placeholder="packaging, software" required></div>
+            <div class="min-w-0"><label for="supplier-rate">Tarifa</label><input id="supplier-rate" name="rate" class="field" type="number" min="0" step="any" placeholder="0,00" required></div>
+          </div>
+          <div class="mt-5 flex justify-end"><button id="create-button" class="button button-primary" type="submit"><i data-lucide="plus" class="icon" aria-hidden="true"></i>Crear proveedor</button></div>
+        </form>
+      </section>
+
+      <section aria-labelledby="filters-heading" class="border-b border-[#dce5df] py-6">
+        <h2 id="filters-heading" class="mb-4 text-lg font-semibold">Filtros</h2>
+        <form id="filter-form" class="grid grid-cols-1 items-end gap-4 sm:grid-cols-[1fr_1fr_auto] lg:max-w-3xl">
+          <div class="min-w-0"><label for="filter-country">País</label><input id="filter-country" name="country" class="field" placeholder="Todos los países" maxlength="2"></div>
+          <div class="min-w-0"><label for="filter-category">Categoría</label><input id="filter-category" name="category" class="field" placeholder="Todas las categorías"></div>
+          <div class="flex gap-2"><button class="button button-primary flex-1" type="submit"><i data-lucide="list-filter" class="icon" aria-hidden="true"></i>Filtrar</button><button class="button icon-button" type="reset" title="Limpiar filtros" aria-label="Limpiar filtros"><i data-lucide="x" class="icon" aria-hidden="true"></i></button></div>
+        </form>
+      </section>
+
+      <section aria-labelledby="suppliers-heading" class="pt-7">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-baseline gap-3"><h2 id="suppliers-heading" class="text-xl font-semibold">Directorio de proveedores</h2><span id="supplier-count" role="status" class="text-sm text-[#61746a]"></span></div>
+          <button id="refresh-button" class="button icon-button" type="button" title="Recargar proveedores" aria-label="Recargar proveedores"><i data-lucide="refresh-cw" class="icon" aria-hidden="true"></i></button>
+        </div>
+        <div id="table-region" class="table-wrap border-y border-[#dce5df] bg-white" role="region" aria-label="Tabla de proveedores" tabindex="0" aria-busy="true">
+          <table>
+            <thead><tr><th scope="col">Proveedor</th><th scope="col">País</th><th scope="col">Categorías</th><th scope="col">Tarifa</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+            <tbody id="supplier-rows"><tr><td colspan="6" class="placeholder">Cargando proveedores…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const apiHost = location.hostname.endsWith(".app.github.dev")
+        ? `${location.protocol}//${location.hostname.replace(/-\d+(?=\.app\.github\.dev$)/, "-8000")}`
+        : "http://localhost:8000";
+      const API_BASE_URL = window.SUPPLIERS_API_BASE_URL || `${apiHost}/api`;
+      const supplierForm = document.getElementById("supplier-form");
+      const filterForm = document.getElementById("filter-form");
+      const rows = document.getElementById("supplier-rows");
+      const tableRegion = document.getElementById("table-region");
+      const errorMessage = document.getElementById("error-message");
+      const successMessage = document.getElementById("success-message");
+      const count = document.getElementById("supplier-count");
+      let activeFilters = new URLSearchParams();
+      let suppliersById = new Map();
+      let loadVersion = 0;
+
+      function renderIcons() {
+        if (window.lucide) lucide.createIcons();
+      }
+
+      function clearMessages() {
+        errorMessage.hidden = true;
+        successMessage.hidden = true;
+      }
+
+      function showError(error) {
+        errorMessage.textContent = error.message;
+        errorMessage.hidden = false;
+        successMessage.hidden = true;
+      }
+
+      function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.hidden = false;
+      }
+
+      async function apiRequest(path, options = {}) {
+        let response;
+        try {
+          response = await fetch(`${API_BASE_URL}${path}`, {
+            ...options,
+            headers: { "Content-Type": "application/json", ...options.headers }
+          });
+        } catch {
+          throw new Error("No se pudo conectar con la API de proveedores.");
+        }
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          const detail = Array.isArray(body.detail)
+            ? body.detail.map(item => `${item.loc?.slice(1).join(".") || "Datos"}: ${item.msg}`).join("; ")
+            : typeof body.detail === "string" ? body.detail : "La solicitud no pudo completarse.";
+          throw new Error(`${response.status === 422 ? "Datos no válidos (422)" : `Error ${response.status}`}: ${detail}`);
+        }
+        return response.status === 204 ? null : response.json();
+      }
+
+      function createCell(text, className = "") {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        cell.className = className;
+        return cell;
+      }
+
+      function showPlaceholder(message) {
+        const row = document.createElement("tr");
+        const cell = createCell(message, "placeholder");
+        cell.colSpan = 6;
+        row.append(cell);
+        rows.replaceChildren(row);
+      }
+
+      function renderSuppliers(suppliers) {
+        suppliersById = new Map(suppliers.map(supplier => [String(supplier.id), supplier]));
+        count.textContent = `${suppliers.length} ${suppliers.length === 1 ? "proveedor" : "proveedores"}`;
+        rows.replaceChildren();
+        if (!suppliers.length) {
+          showPlaceholder("No hay proveedores para los filtros seleccionados.");
+          return;
+        }
+        for (const supplier of suppliers) {
+          const row = document.createElement("tr");
+          row.dataset.id = supplier.id;
+          row.append(createCell(supplier.name, "supplier-name"), createCell(supplier.country), createCell(supplier.categories.join(", "), "categories"));
+
+          const rateCell = createCell("");
+          const rateForm = document.createElement("form");
+          rateForm.className = "rate-form";
+          const rateValue = document.createElement("span");
+          rateValue.className = "rate-value";
+          rateValue.textContent = supplier.rate.toLocaleString("es-ES", { maximumFractionDigits: 8 });
+          const rateInput = document.createElement("input");
+          rateInput.className = "field rate-input";
+          rateInput.type = "number";
+          rateInput.name = "rate";
+          rateInput.min = "0";
+          rateInput.step = "any";
+          rateInput.required = true;
+          rateInput.value = supplier.rate;
+          rateInput.setAttribute("aria-label", `Nueva tarifa de ${supplier.name}`);
+          const updateButton = document.createElement("button");
+          updateButton.className = "button row-button";
+          updateButton.type = "submit";
+          updateButton.innerHTML = '<i data-lucide="save" class="icon" aria-hidden="true"></i>Actualizar';
+          rateForm.append(rateValue, rateInput, updateButton);
+          rateCell.append(rateForm);
+          row.append(rateCell);
+
+          const statusCell = createCell("");
+          const badge = document.createElement("span");
+          const active = supplier.status === "active";
+          badge.className = `badge ${active ? "badge-active" : "badge-suspended"}`;
+          badge.textContent = active ? "Activo" : "Suspendido";
+          statusCell.append(badge);
+          const actionsCell = createCell("");
+          const statusButton = document.createElement("button");
+          statusButton.className = "button row-button";
+          statusButton.type = "button";
+          statusButton.dataset.action = "status";
+          statusButton.title = active ? "Suspender proveedor" : "Activar proveedor";
+          statusButton.innerHTML = `<i data-lucide="${active ? "pause" : "circle-check"}" class="icon" aria-hidden="true"></i>Cambiar Estado`;
+          actionsCell.append(statusButton);
+          row.append(statusCell, actionsCell);
+          rows.append(row);
+        }
+        renderIcons();
+      }
+
+      async function loadSuppliers() {
+        const version = ++loadVersion;
+        tableRegion.setAttribute("aria-busy", "true");
+        count.textContent = "";
+        showPlaceholder("Cargando proveedores…");
+        try {
+          const query = activeFilters.toString();
+          const data = await apiRequest(`/suppliers${query ? `?${query}` : ""}`);
+          if (version !== loadVersion) return;
+          renderSuppliers(data);
+        } catch (error) {
+          if (version !== loadVersion) return;
+          showPlaceholder("No se pudieron cargar los proveedores.");
+          showError(error);
+        } finally {
+          if (version === loadVersion) tableRegion.setAttribute("aria-busy", "false");
+        }
+      }
+
+      supplierForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        clearMessages();
+        const fields = new FormData(supplierForm);
+        const payload = {
+          name: fields.get("name").trim(),
+          country: fields.get("country").trim().toUpperCase(),
+          categories: fields.get("categories").split(",").map(category => category.trim()).filter(Boolean),
+          rate: Number(fields.get("rate")),
+          status: "active"
+        };
+        if (!payload.name || !payload.country || !payload.categories.length) {
+          showError(new Error("Completa el nombre, el país y al menos una categoría."));
+          return;
+        }
+        const button = document.getElementById("create-button");
+        button.disabled = true;
+        try {
+          await apiRequest("/suppliers", { method: "POST", body: JSON.stringify(payload) });
+          supplierForm.reset();
+          showSuccess("Proveedor creado.");
+          await loadSuppliers();
+        } catch (error) {
+          showError(error);
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      filterForm.addEventListener("submit", event => {
+        event.preventDefault();
+        clearMessages();
+        activeFilters = new URLSearchParams();
+        const fields = new FormData(filterForm);
+        const country = fields.get("country").trim().toUpperCase();
+        const category = fields.get("category").trim();
+        if (country) activeFilters.set("country", country);
+        if (category) activeFilters.set("category", category);
+        loadSuppliers();
+      });
+
+      filterForm.addEventListener("reset", () => {
+        clearMessages();
+        activeFilters = new URLSearchParams();
+        loadSuppliers();
+      });
+
+      async function updateSupplier(id, field, value, button) {
+        clearMessages();
+        button.disabled = true;
+        try {
+          await apiRequest(`/suppliers/${encodeURIComponent(id)}/${field}`, {
+            method: "PATCH", body: JSON.stringify({ [field]: value })
+          });
+          showSuccess(field === "rate" ? "Tarifa actualizada." : "Estado actualizado.");
+          await loadSuppliers();
+        } catch (error) {
+          showError(error);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      rows.addEventListener("submit", event => {
+        if (!event.target.matches(".rate-form")) return;
+        event.preventDefault();
+        const form = event.target;
+        updateSupplier(form.closest("tr").dataset.id, "rate", Number(new FormData(form).get("rate")), form.querySelector("button"));
+      });
+
+      rows.addEventListener("click", event => {
+        const button = event.target.closest('button[data-action="status"]');
+        if (!button || button.disabled) return;
+        const id = button.closest("tr").dataset.id;
+        const supplier = suppliersById.get(id);
+        updateSupplier(id, "status", supplier.status === "active" ? "suspended" : "active", button);
+      });
+
+      document.getElementById("refresh-button").addEventListener("click", () => {
+        clearMessages();
+        loadSuppliers();
+      });
+      renderIcons();
+      loadSuppliers();
+    </script>
+  </body>
+</html>

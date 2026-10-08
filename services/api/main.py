@@ -9,8 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from .incident_analyzer import process_csv_data
+from .routes.suppliers import router as suppliers_router
 
 app = FastAPI()
+app.include_router(suppliers_router, prefix="/api")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
