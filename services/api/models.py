@@ -27,3 +27,49 @@ class SupplierRateUpdate(BaseModel):
 
 class SupplierStatusUpdate(BaseModel):
     status: SupplierStatus
+
+
+class RoleEnum(str, Enum):
+    admin = "admin"
+    manager = "manager"
+    user = "user"
+
+
+class UserCreate(BaseModel):
+    email: str
+    password: str = Field(max_length=72)
+    role: RoleEnum = RoleEnum.user
+    name: str | None = None
+    phone: str | None = None
+    address: str | None = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    is_active: bool = True
+    role: RoleEnum
+    created_at: str
+
+
+class UserDB(UserResponse):
+    hashed_password: str
+
+
+class UserUpdate(BaseModel):
+    email: str | None = None
+    role: RoleEnum | None = None
+
+
+class ProfileDB(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    phone: str
+    address: str
+
+
+class ProfileUpdate(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+    address: str | None = None
