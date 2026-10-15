@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from tinydb import Query
 
 from ..database import suppliers
@@ -9,13 +9,17 @@ from ..models import (
     SupplierRateUpdate,
     SupplierResponse,
     SupplierStatusUpdate,
+    UserDB,
 )
+from ..security import get_current_user
 
 router = APIRouter(prefix="/suppliers", tags=["suppliers"])
 
 
 @router.post("", response_model=SupplierResponse, status_code=201)
-def create_supplier(supplier: SupplierCreate) -> SupplierResponse:
+def create_supplier(
+    supplier: SupplierCreate, current_user: UserDB = Depends(get_current_user)
+) -> SupplierResponse:
     data = supplier.model_dump(mode="json")
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     supplier_id = suppliers.insert(data)
@@ -24,7 +28,9 @@ def create_supplier(supplier: SupplierCreate) -> SupplierResponse:
 
 @router.get("", response_model=list[SupplierResponse])
 def list_suppliers(
-    country: str | None = None, category: str | None = None
+    country: str | None = None,
+    category: str | None = None,
+    current_user: UserDB = Depends(get_current_user),
 ) -> list[SupplierResponse]:
     query = Query()
     condition = None
@@ -40,7 +46,9 @@ def list_suppliers(
 
 
 @router.get("/{id}", response_model=SupplierResponse)
-def get_supplier(id: int) -> SupplierResponse:
+def get_supplier(
+    id: int, current_user: UserDB = Depends(get_current_user)
+) -> SupplierResponse:
     record = suppliers.get(doc_id=id)
     if record is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -48,25 +56,35 @@ def get_supplier(id: int) -> SupplierResponse:
 
 
 @router.patch("/{id}/rate", response_model=SupplierResponse)
-def update_supplier_rate(id: int, update: SupplierRateUpdate) -> SupplierResponse:
+def update_supplier_rate(
+    id: int,
+    update: SupplierRateUpdate,
+    current_user: UserDB = Depends(get_current_user),
+) -> SupplierResponse:
     data = update.model_dump(mode="json")
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not suppliers.update(data, doc_ids=[id]):
         raise HTTPException(status_code=404, detail="Supplier not found")
-    return get_supplier(id)
+    return get_supplier(id, current_user)
 
 
 @router.patch("/{id}/status", response_model=SupplierResponse)
-def update_supplier_status(id: int, update: SupplierStatusUpdate) -> SupplierResponse:
+def update_supplier_status(
+    id: int,
+    update: SupplierStatusUpdate,
+    current_user: UserDB = Depends(get_current_user),
+) -> SupplierResponse:
     data = update.model_dump(mode="json")
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not suppliers.update(data, doc_ids=[id]):
         raise HTTPException(status_code=404, detail="Supplier not found")
-    return get_supplier(id)
+    return get_supplier(id, current_user)
 
 
 @router.delete("/{id}", status_code=204)
-def delete_supplier(id: int) -> Response:
+def delete_supplier(
+    id: int, current_user: UserDB = Depends(get_current_user)
+) -> Response:
     if not suppliers.remove(doc_ids=[id]):
         raise HTTPException(status_code=404, detail="Supplier not found")
     return Response(status_code=204)
