@@ -19,6 +19,15 @@
 - [x] Contraseña limitada a 72 caracteres por la restricción de bcrypt.
 - [x] Las 6 rutas de `/api/suppliers` exigen token válido (401 sin él).
 
+## Tareas de autenticación en el frontend (backoffice)
+
+- [x] `src/utils/api.ts`: `fetchWithAuth` con cabecera Bearer y redirección a `/login` ante un 401.
+- [x] `src/contexts/AuthContext.tsx`: `AuthProvider` y `useAuth` con `token`, `user`, `isAuthenticated`, `isLoading`, `login`, `logout` y `refreshUser`.
+- [x] `AuthProvider` integrado en `app/layout.tsx`.
+- [x] Vistas `/login` y `/register` (registro con errores 409/422 por campo y auto-login).
+- [x] `src/components/AuthGuard.tsx` protegiendo `/` y `/account/profile`.
+- [x] Vista `/account/profile` para editar nombre, teléfono y dirección vía `PUT /profiles/me`.
+
 ## Próximos pasos
 
 1. Conectar el website público con contenido administrable.
@@ -34,6 +43,7 @@
 
 ## Historial de cambios
 
+- **2026-10-17:** implementados los flujos de autenticación del backoffice en Next.js (login, registro, perfil, `AuthGuard` en el dashboard). El website público sigue sin protección.
 - **2026-10-15:** implementada la autenticación JWT de la API (usuarios, perfiles, roles), protegidas las rutas de proveedores y corregida la escalada de privilegios en el registro.
 - **2026-09-17:** corregida la navegación por anchors del website y el backoffice, incluido el estado activo del sidebar y el desplazamiento suave.
 - **2026-09-17:** renovada por completo la estética del website y el backoffice con utilidades Tailwind, diseño responsive e identidad emerald/slate; corregida la resolución de componentes en Turbopack.
