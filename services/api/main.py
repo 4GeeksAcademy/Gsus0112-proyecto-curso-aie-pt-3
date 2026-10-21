@@ -4,15 +4,17 @@ import csv
 import io
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from .incident_analyzer import process_csv_data
+from .models import UserDB
 from .routes.auth import router as auth_router
 from .routes.profiles import router as profiles_router
 from .routes.suppliers import router as suppliers_router
 from .routes.users import router as users_router
+from .security import get_current_user
 
 app = FastAPI()
 app.include_router(suppliers_router, prefix="/api")
@@ -31,7 +33,9 @@ last_analysis: dict[str, Any] | None = None
 
 
 @app.post("/api/incidents/analyze")
-async def analyze_incidents(file: UploadFile = File(...)) -> dict[str, Any]:
+async def analyze_incidents(
+    file: UploadFile = File(...), _: UserDB = Depends(get_current_user)
+) -> dict[str, Any]:
     global last_analysis
 
     if not file.filename or not file.filename.lower().endswith(".csv"):
@@ -48,7 +52,7 @@ async def analyze_incidents(file: UploadFile = File(...)) -> dict[str, Any]:
 
 
 @app.get("/api/incidents/results/export")
-def export_results() -> StreamingResponse:
+def export_results(_: UserDB = Depends(get_current_user)) -> StreamingResponse:
     analysis = last_analysis
     if analysis is None:
         raise HTTPException(status_code=404, detail="No analysis available")

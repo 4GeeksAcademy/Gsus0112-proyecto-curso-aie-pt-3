@@ -1,19 +1,21 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 const navigation = [
-  { label: 'Resumen', icon: '📊', href: '#resumen' },
-  { label: 'Almacenes', icon: '🏭', href: '#almacenes' },
-  { label: 'Envíos', icon: '📦', href: '#envios' },
-  { label: 'Devoluciones', icon: '🔄', href: '#devoluciones' },
-  { label: 'Incidencias', icon: '📁', href: '#incidencias' },
-  { label: 'Clientes', icon: '👥', href: '#clientes' },
+  { label: 'Resumen', icon: '📊', href: '/#resumen' },
+  { label: 'Almacenes', icon: '🏭', href: '/#almacenes' },
+  { label: 'Envíos', icon: '📦', href: '/#envios' },
+  { label: 'Devoluciones', icon: '🔄', href: '/#devoluciones' },
+  { label: 'Clientes', icon: '👥', href: '/#clientes' },
+  { label: 'Analizador de Incidencias', icon: '📁', href: '/incidents' },
 ];
 
 /** Renderiza la navegación propia del centro de control interno. */
 export function Sidebar(): React.ReactElement {
-  const [activeSection, setActiveSection] = useState<string>('#resumen');
+  const pathname = usePathname();
+  const [activeSection, setActiveSection] = useState<string>(pathname === '/' ? '/#resumen' : pathname);
 
   return (
     <aside className="flex w-full flex-col bg-slate-900 text-white md:fixed md:inset-y-0 md:left-0 md:w-64">

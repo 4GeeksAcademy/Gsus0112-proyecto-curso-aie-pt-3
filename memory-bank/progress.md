@@ -28,12 +28,21 @@
 - [x] `src/components/AuthGuard.tsx` protegiendo `/` y `/account/profile`.
 - [x] Vista `/account/profile` para editar nombre, teléfono y dirección vía `PUT /profiles/me`.
 
+## Analizador de incidencias (Fase 2: frontend)
+
+- [x] `app/incidents/page.tsx` protegida con `AuthGuard`: subida de CSV vía `FormData` con `fetchWithAuth` (sin `Content-Type` manual).
+- [x] Dashboard de resultados: métricas generales, desglose de inválidos, categorías, estados y satisfacción (promedio y distribución 1-5).
+- [x] Botón "Descargar CSV de Resultados" con GET autenticado, `Blob` y descarga de `results.csv`.
+- [x] Enlace "Analizador de Incidencias" en el `Sidebar`; los anchors pasan a `/#...` para funcionar desde otras rutas.
+- [x] `POST /api/incidents/analyze` y `GET /api/incidents/results/export` exigen token (`get_current_user`).
+- [x] Eliminado el componente `IncidentsAnalysis` del dashboard (URL fija y sin token).
+
 ## Próximos pasos
 
 1. Conectar el website público con contenido administrable.
 2. Conectar el backoffice con datos operativos en tiempo real.
 3. Implementar servicios backend e integraciones con almacenes y transportistas.
-4. Enviar el token JWT desde `uis/backoffice/suppliers/index.html` (actualmente recibe 401).
+4. Enviar el token JWT desde `uis/backoffice/suppliers/index.html` y `uis/backoffice/index.html` (actualmente reciben 401).
 5. Crear un seeder para el primer usuario `admin`.
 
 ## Decisiones pendientes
@@ -42,6 +51,8 @@
 - Definir la estrategia de deployment para interfaces, servicios y agentes.
 
 ## Historial de cambios
+
+- **2026-10-21:** añadida la página `/incidents` del backoffice (análisis de CSV, dashboard de resultados y exportación autenticada) y su enlace en el sidebar; protegidos con JWT los endpoints de incidencias y eliminado el componente `IncidentsAnalysis`.
 
 - **2026-10-17:** implementados los flujos de autenticación del backoffice en Next.js (login, registro, perfil, `AuthGuard` en el dashboard). El website público sigue sin protección.
 - **2026-10-15:** implementada la autenticación JWT de la API (usuarios, perfiles, roles), protegidas las rutas de proveedores y corregida la escalada de privilegios en el registro.
