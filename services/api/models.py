@@ -62,6 +62,21 @@ class UserResponse(BaseModel):
 
 class UserDB(UserResponse):
     hashed_password: str
+    password_changed_at: str | None = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(max_length=254)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(max_length=2048)
+    new_password: str = Field(min_length=1, max_length=72)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(max_length=72)
+    new_password: str = Field(min_length=1, max_length=72)
 
 
 class UserUpdate(BaseModel):
