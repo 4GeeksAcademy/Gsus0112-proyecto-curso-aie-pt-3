@@ -61,7 +61,7 @@ def update_supplier_rate(
     update: SupplierRateUpdate,
     current_user: UserDB = Depends(get_current_user),
 ) -> SupplierResponse:
-    data = update.model_dump(mode="json")
+    data = {"rate_per_shipment": update.rate_per_shipment}
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not suppliers.update(data, doc_ids=[id]):
         raise HTTPException(status_code=404, detail="Supplier not found")

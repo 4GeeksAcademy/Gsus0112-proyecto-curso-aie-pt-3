@@ -8,12 +8,20 @@ class SupplierStatus(str, Enum):
     suspended = "suspended"
 
 
-class SupplierCreate(BaseModel):
+class SupplierBase(BaseModel):
     name: str
     country: str
     categories: list[str]
-    rate: float = Field(gt=0)
+    rate_per_shipment: float = Field(gt=0)
+    currency: str
+    service_zone: str
+    contact_email: str = Field(pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+    notes: str | None = None
     status: SupplierStatus
+
+
+class SupplierCreate(SupplierBase):
+    pass
 
 
 class SupplierResponse(SupplierCreate):
@@ -22,7 +30,7 @@ class SupplierResponse(SupplierCreate):
 
 
 class SupplierRateUpdate(BaseModel):
-    rate: float = Field(gt=0)
+    rate_per_shipment: float = Field(gt=0)
 
 
 class SupplierStatusUpdate(BaseModel):
