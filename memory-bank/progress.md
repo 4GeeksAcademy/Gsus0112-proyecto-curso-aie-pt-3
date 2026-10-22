@@ -29,6 +29,7 @@
 - [x] Vistas `/login` y `/register` (registro con errores 409/422 por campo y auto-login).
 - [x] `src/components/AuthGuard.tsx` protegiendo `/` y `/account/profile`.
 - [x] Vista `/account/profile` para editar nombre, teléfono y dirección vía `PUT /profiles/me`.
+- [x] AUTH-03: vistas `/forgot-password`, `/reset-password` y `/account/change-password` (con `AuthGuard` y `fetchWithAuth`), y enlace "¿Olvidaste tu contraseña?" en `/login`.
 
 ## Próximos pasos
 
