@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 const navigation = [
   { label: 'Resumen', icon: '📊', href: '#resumen' },
@@ -9,11 +10,17 @@ const navigation = [
   { label: 'Devoluciones', icon: '🔄', href: '#devoluciones' },
   { label: 'Incidencias', icon: '📁', href: '#incidencias' },
   { label: 'Clientes', icon: '👥', href: '#clientes' },
+  { label: 'Directorio de Proveedores', icon: '🚚', href: '/suppliers' },
 ];
 
 /** Renderiza la navegación propia del centro de control interno. */
 export function Sidebar(): React.ReactElement {
   const [activeSection, setActiveSection] = useState<string>('#resumen');
+  const pathname = usePathname();
+
+  const isActive = (href: string): boolean => href.startsWith('/')
+    ? pathname === href
+    : pathname === '/' && activeSection === href;
 
   return (
     <aside className="flex w-full flex-col bg-slate-900 text-white md:fixed md:inset-y-0 md:left-0 md:w-64">
@@ -24,10 +31,10 @@ export function Sidebar(): React.ReactElement {
       <nav className="flex gap-2 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col md:overflow-visible md:py-6" aria-label="Navegación interna">
         {navigation.map((item) => (
           <a
-            className={`flex shrink-0 items-center gap-3 rounded-r-lg border-l-4 px-4 py-3 text-sm font-medium transition ${activeSection === item.href ? 'border-emerald-400 bg-slate-800 text-white' : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-            href={item.href}
+            className={`flex shrink-0 items-center gap-3 rounded-r-lg border-l-4 px-4 py-3 text-sm font-medium transition ${isActive(item.href) ? 'border-emerald-400 bg-slate-800 text-white' : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+            href={item.href.startsWith('#') && pathname !== '/' ? `/${item.href}` : item.href}
             key={item.label}
-            aria-current={activeSection === item.href ? 'page' : undefined}
+            aria-current={isActive(item.href) ? 'page' : undefined}
             onClick={() => setActiveSection(item.href)}
           >
             <span aria-hidden="true">{item.icon}</span>{item.label}

@@ -7,6 +7,7 @@
 - **Website público:** primera versión completada con soluciones, cifras de negocio y red de almacenes.
 - **Backoffice interno:** primera versión completada con KPIs, estado de almacenes y frentes operativos.
 - **Autenticación de la API:** completada. JWT con `python-jose`, hash bcrypt con `passlib`, tablas TinyDB `users` y `profiles`, endpoints `/auth`, `/users` y `/profiles`, y rutas de `/api/suppliers` protegidas.
+- **Directorio de proveedores:** contrato con `rate_per_shipment`, moneda, zona, email y notas; vista Next.js `/suppliers` autenticada y enlazada desde el menú; seeder ejecutable mediante `uv run seed`.
 
 ## Tareas de autenticación y restricción de rutas
 
@@ -33,7 +34,7 @@
 1. Conectar el website público con contenido administrable.
 2. Conectar el backoffice con datos operativos en tiempo real.
 3. Implementar servicios backend e integraciones con almacenes y transportistas.
-4. Enviar el token JWT desde `uis/backoffice/suppliers/index.html` (actualmente recibe 401).
+4. Revisar los contactos, zonas y tarifas de demostración de proveedores antes de producción.
 5. Crear un seeder para el primer usuario `admin`.
 
 ## Decisiones pendientes
@@ -43,6 +44,7 @@
 
 ## Historial de cambios
 
+- **2026-10-22:** corregido el contrato de proveedores y el PATCH de tarifa; añadidos `SUPPLIERS_SEED`, comando `uv run seed` y migración idempotente de registros antiguos. Directorio integrado en Next.js con `AuthGuard`, `fetchWithAuth` para GET/POST/PATCH/DELETE y enlace en el sidebar. Añadidas siete pruebas de regresión con base de datos en memoria.
 - **2026-10-17:** implementados los flujos de autenticación del backoffice en Next.js (login, registro, perfil, `AuthGuard` en el dashboard). El website público sigue sin protección.
 - **2026-10-15:** implementada la autenticación JWT de la API (usuarios, perfiles, roles), protegidas las rutas de proveedores y corregida la escalada de privilegios en el registro.
 - **2026-09-17:** corregida la navegación por anchors del website y el backoffice, incluido el estado activo del sidebar y el desplazamiento suave.
