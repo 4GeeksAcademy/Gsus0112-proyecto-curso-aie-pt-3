@@ -19,6 +19,7 @@
 - [x] Registro público forzado a rol `user`; solo un `admin` puede cambiar roles.
 - [x] Contraseña limitada a 72 caracteres por la restricción de bcrypt.
 - [x] Las 6 rutas de `/api/suppliers` exigen token válido (401 sin él).
+- [x] AUTH-03: `POST /auth/forgot-password` (siempre 200, email vía Resend), `POST /auth/reset-password` (JWT de un solo uso mediante `iat` vs `password_changed_at`) y `POST /auth/change-password` (Bearer, 400 si la contraseña actual falla).
 
 ## Tareas de autenticación en el frontend (backoffice)
 
@@ -28,6 +29,7 @@
 - [x] Vistas `/login` y `/register` (registro con errores 409/422 por campo y auto-login).
 - [x] `src/components/AuthGuard.tsx` protegiendo `/` y `/account/profile`.
 - [x] Vista `/account/profile` para editar nombre, teléfono y dirección vía `PUT /profiles/me`.
+- [x] AUTH-03: vistas `/forgot-password`, `/reset-password` y `/account/change-password` (con `AuthGuard` y `fetchWithAuth`), y enlace "¿Olvidaste tu contraseña?" en `/login`.
 
 ## Próximos pasos
 
@@ -44,6 +46,7 @@
 
 ## Historial de cambios
 
+- **2026-10-22:** AUTH-03: recuperación y cambio de contraseña en la API. Nuevo `mailer.py` con `resend` (`RESEND_API_KEY`), tokens de recuperación con `type=password_reset` y caducidad de 15-60 min rechazados como sesión, campo `password_changed_at` en `users` y cinco pruebas en `test_auth_password.py`.
 - **2026-10-22:** corregido el contrato de proveedores y el PATCH de tarifa; añadidos `SUPPLIERS_SEED`, comando `uv run seed` y migración idempotente de registros antiguos. Directorio integrado en Next.js con `AuthGuard`, `fetchWithAuth` para GET/POST/PATCH/DELETE y enlace en el sidebar. Añadidas siete pruebas de regresión con base de datos en memoria.
 - **2026-10-17:** implementados los flujos de autenticación del backoffice en Next.js (login, registro, perfil, `AuthGuard` en el dashboard). El website público sigue sin protección.
 - **2026-10-15:** implementada la autenticación JWT de la API (usuarios, perfiles, roles), protegidas las rutas de proveedores y corregida la escalada de privilegios en el registro.

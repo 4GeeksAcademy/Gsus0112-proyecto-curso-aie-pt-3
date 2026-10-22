@@ -98,6 +98,12 @@ export default function LoginPage(): ReactElement {
             {isSubmitting ? 'Entrando…' : 'Entrar'}
           </button>
 
+          <p className="text-center text-sm">
+            <Link href="/forgot-password" className="text-slate-500 hover:text-emerald-700 hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
+
           <p className="text-center text-sm text-slate-500">
             ¿No tienes cuenta?{' '}
             <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-700">

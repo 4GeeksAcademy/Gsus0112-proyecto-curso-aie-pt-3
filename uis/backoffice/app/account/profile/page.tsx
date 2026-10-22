@@ -155,9 +155,17 @@ function ProfileContent(): ReactElement | null {
         <Link href="/" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
           ← Volver al centro de control
         </Link>
-        <div className="mb-8 mt-4">
-          <h1 className="text-2xl font-bold text-slate-900">Mi perfil</h1>
-          <p className="mt-1 text-sm text-slate-500">Gestiona tus datos de contacto.</p>
+        <div className="mb-8 mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Mi perfil</h1>
+            <p className="mt-1 text-sm text-slate-500">Gestiona tus datos de contacto.</p>
+          </div>
+          <Link
+            href="/account/change-password"
+            className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          >
+            Cambiar contraseña
+          </Link>
         </div>
         <ProfileForm user={user} />
       </div>

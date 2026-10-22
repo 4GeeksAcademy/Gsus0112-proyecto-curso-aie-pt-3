@@ -12,6 +12,9 @@ from .models import UserDB
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+# Clamped to the 15-60 minute window required for reset links.
+RESET_TOKEN_EXPIRE_MINUTES = min(max(int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "30")), 15), 60)
+PASSWORD_RESET_TOKEN_TYPE = "password_reset"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -31,6 +34,28 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def create_password_reset_token(user_id: int) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "type": PASSWORD_RESET_TOKEN_TYPE,
+        "iat": now,
+        "exp": now + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_password_reset_token(token: str) -> tuple[int, int] | None:
+    """Returns (user_id, iat) for a valid, unexpired reset token, or None."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != PASSWORD_RESET_TOKEN_TYPE:
+            return None
+        return int(payload["sub"]), int(payload["iat"])
+    except (JWTError, KeyError, TypeError, ValueError):
+        return None
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserDB:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -39,6 +64,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserDB:
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # Reset tokens share the signing key, so they must never authenticate a session.
+        if payload.get("type") == PASSWORD_RESET_TOKEN_TYPE:
+            raise credentials_exception
         user_id = int(payload["sub"])
     except (JWTError, KeyError, TypeError, ValueError):
         raise credentials_exception
