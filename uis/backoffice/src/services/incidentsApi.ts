@@ -5,16 +5,23 @@ import type {
   IncidentStatus,
   IncidentSummary,
 } from '../types/incidents';
-
-const DEFAULT_API_URL = 'http://localhost:8000';
+import { API_BASE_URL, getToken } from '../utils/api';
 
 /** Obtiene la URL base de la API de incidencias configurada o local por defecto. */
 export function getApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (typeof envUrl === 'string' && envUrl.trim().length > 0) {
-    return envUrl.trim().replace(/\/+$/, '');
+  return API_BASE_URL;
+}
+
+function buildAuthHeaders(extra?: Record<string, string>): HeadersInit {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...extra,
+  };
+  const token = getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
-  return DEFAULT_API_URL;
+  return headers;
 }
 
 export class ApiValidationError extends Error {
@@ -84,7 +91,7 @@ export async function fetchIncidents(filters?: IncidentFilters): Promise<Inciden
   try {
     response = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: buildAuthHeaders(),
       cache: 'no-store',
     });
   } catch {
@@ -119,7 +126,7 @@ export async function fetchIncidentById(id: number): Promise<Incident> {
   try {
     response = await fetch(`${baseUrl}/api/incidents/${id}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: buildAuthHeaders(),
       cache: 'no-store',
     });
   } catch {
@@ -150,10 +157,7 @@ export async function createIncidentRequest(input: IncidentCreateInput): Promise
   try {
     response = await fetch(`${baseUrl}/api/incidents`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(input),
     });
   } catch {
@@ -187,10 +191,7 @@ export async function updateIncidentStatusRequest(
   try {
     response = await fetch(`${baseUrl}/api/incidents/${id}/status`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ status }),
     });
   } catch {
@@ -221,7 +222,7 @@ export async function fetchIncidentsSummary(): Promise<IncidentSummary> {
   try {
     response = await fetch(`${baseUrl}/api/incidents/summary`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: buildAuthHeaders(),
       cache: 'no-store',
     });
   } catch {

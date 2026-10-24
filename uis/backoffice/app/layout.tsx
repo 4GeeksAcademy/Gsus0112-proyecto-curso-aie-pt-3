@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
+import { AuthProvider } from '@/src/contexts/AuthContext';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,7 +18,9 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps): ReactNode {
   return (
     <html lang="es">
-      <body className="bg-slate-50 font-sans text-slate-900 antialiased">{children}</body>
+      <body className="bg-slate-50 font-sans text-slate-900 antialiased">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

@@ -1,4 +1,4 @@
-"""API de gestión y análisis centralizado de incidencias de TrackFlow."""
+"""API de gestión y análisis centralizado de incidencias, proveedores y autenticación de TrackFlow."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -34,8 +34,17 @@ from services.api.database import (  # noqa: E402
     list_incidents,
     update_incident_status,
 )
+from .routes.auth import router as auth_router  # noqa: E402
+from .routes.profiles import router as profiles_router  # noqa: E402
+from .routes.suppliers import router as suppliers_router  # noqa: E402
+from .routes.users import router as users_router  # noqa: E402
 
-app = FastAPI(title="TrackFlow Incident Manager API")
+app = FastAPI(title="TrackFlow API")
+app.include_router(suppliers_router, prefix="/api")
+# Mounted without /api so the path matches OAuth2PasswordBearer(tokenUrl="/auth/login").
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(profiles_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -64,16 +73,18 @@ def _validation_error_response(field: str, message: str) -> JSONResponse:
 async def handle_request_validation_error(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    errors = exc.errors()
-    field = "body"
-    message = "Los datos enviados no tienen el formato esperado."
-    if errors:
-        first = errors[0]
-        loc = first.get("loc", ())
-        if len(loc) > 1:
-            field = str(loc[-1])
-        message = f"Valor inválido en el campo '{field}': {first.get('msg', 'formato incorrecto')}."
-    return _validation_error_response(field, message)
+    if request.url.path.startswith("/api/incidents"):
+        errors = exc.errors()
+        field = "body"
+        message = "Los datos enviados no tienen el formato esperado."
+        if errors:
+            first = errors[0]
+            loc = first.get("loc", ())
+            if len(loc) > 1:
+                field = str(loc[-1])
+            message = f"Valor inválido en el campo '{field}': {first.get('msg', 'formato incorrecto')}."
+        return _validation_error_response(field, message)
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 @app.exception_handler(Exception)

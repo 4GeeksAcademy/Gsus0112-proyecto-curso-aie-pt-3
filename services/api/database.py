@@ -1,4 +1,4 @@
-"""Modelo de datos Incident y acceso a la base de datos SQLite para TrackFlow."""
+"""Acceso a las bases de datos de TrackFlow (TinyDB para proveedores/usuarios y SQLite/TinyDB para incidencias)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, Optional
+
+from tinydb import TinyDB
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
@@ -23,6 +25,18 @@ from packages.shared.incident_rules import (  # noqa: E402
     build_empty_summary,
 )
 
+# --- TinyDB tables used by Suppliers, Users & Profiles ---
+db = TinyDB(
+    os.getenv(
+        "TRACKFLOW_DB_PATH", str(Path(__file__).resolve().parent / "db.json")
+    )
+)
+suppliers = db.table("suppliers")
+users = db.table("users")
+profiles = db.table("profiles")
+incidents_tinydb = db.table("incidents")
+
+# --- SQLite persistence for the Centralized Incident Manager ---
 DEFAULT_DB_PATH = Path(__file__).resolve().parent / "incidents.db"
 
 
