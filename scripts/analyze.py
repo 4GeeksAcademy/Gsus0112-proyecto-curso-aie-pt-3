@@ -4,8 +4,8 @@ import csv
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "services" / "api"))
-from incident_analyzer import process_csv_data
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from packages.shared.incident_analyzer import process_csv_data
 
 
 def print_breakdown(title, counts):

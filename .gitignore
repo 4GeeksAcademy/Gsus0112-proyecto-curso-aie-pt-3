@@ -6,3 +6,7 @@ dist/
 *.js.map
 *.tsbuildinfo
 .DS_Store
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite3
