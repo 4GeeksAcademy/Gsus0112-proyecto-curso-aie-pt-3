@@ -2,6 +2,7 @@
 
 ## Estado actual
 
+- **Gestor de Incidencias Centralizado:** completado. Incluye modelo `Incident` con restricciones de integridad en `services/api/database.py`, lógica de validación y transformación compartida en `packages/shared/`, script idempotente `scripts/seed_incidents.py`, endpoints REST (`POST /api/incidents`, `GET /api/incidents`, `GET /api/incidents/{id}`, `PATCH /api/incidents/{id}/status`, `GET /api/incidents/summary`) y vistas de registro, listado y resumen en `uis/backoffice/`.
 - **Modelos de dominio:** completado. Incluye interfaces TypeScript y funciones de filtrado, ordenamiento, búsqueda, validación y agregación en `src/`.
 - **Infraestructura de agentes:** completada. Incluye banco de memoria, instrucciones globales, reglas y un skill de revisión de código.
 - **Website público:** primera versión completada con soluciones, cifras de negocio y red de almacenes.
@@ -34,7 +35,7 @@
 ## Próximos pasos
 
 1. Conectar el website público con contenido administrable.
-2. Conectar el backoffice con datos operativos en tiempo real.
+2. Evolucionar el gestor de incidencias con búsqueda semántica mediante embeddings.
 3. Implementar servicios backend e integraciones con almacenes y transportistas.
 4. Revisar los contactos, zonas y tarifas de demostración de proveedores antes de producción.
 5. Crear un seeder para el primer usuario `admin`.
@@ -46,6 +47,7 @@
 
 ## Historial de cambios
 
+- **2026-10-23:** integrado el Gestor de Incidencias Centralizado de TrackFlow: lógica compartida en `packages/shared/`, script de seed idempotente `scripts/seed_incidents.py`, endpoints CRUD/ciclo de vida/resumen en `services/api/` y vistas de registro, listado con filtros y panel de resumen en `uis/backoffice/`.
 - **2026-10-22:** AUTH-03: recuperación y cambio de contraseña en la API. Nuevo `mailer.py` con `resend` (`RESEND_API_KEY`), tokens de recuperación con `type=password_reset` y caducidad de 15-60 min rechazados como sesión, campo `password_changed_at` en `users` y cinco pruebas en `test_auth_password.py`.
 - **2026-10-22:** corregido el contrato de proveedores y el PATCH de tarifa; añadidos `SUPPLIERS_SEED`, comando `uv run seed` y migración idempotente de registros antiguos. Directorio integrado en Next.js con `AuthGuard`, `fetchWithAuth` para GET/POST/PATCH/DELETE y enlace en el sidebar. Añadidas siete pruebas de regresión con base de datos en memoria.
 - **2026-10-17:** implementados los flujos de autenticación del backoffice en Next.js (login, registro, perfil, `AuthGuard` en el dashboard). El website público sigue sin protección.

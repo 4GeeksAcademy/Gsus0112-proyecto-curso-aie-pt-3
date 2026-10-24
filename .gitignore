@@ -7,7 +7,9 @@ dist/
 *.tsbuildinfo
 .DS_Store
 __pycache__/
-*.pyc
+*.py[cod]
+*.db
+*.sqlite3
 .venv/
 *.egg-info/
 build/
