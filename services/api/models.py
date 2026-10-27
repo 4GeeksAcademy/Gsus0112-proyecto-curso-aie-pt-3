@@ -44,8 +44,8 @@ class RoleEnum(str, Enum):
 
 
 class UserCreate(BaseModel):
-    email: str
-    password: str = Field(max_length=72)
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+    password: str = Field(min_length=1, max_length=72)
     role: RoleEnum = RoleEnum.user
     name: str | None = None
     phone: str | None = None
@@ -66,16 +66,16 @@ class UserDB(UserResponse):
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: str = Field(max_length=254)
+    email: str = Field(min_length=1, max_length=254)
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str = Field(max_length=2048)
+    token: str = Field(min_length=1, max_length=2048)
     new_password: str = Field(min_length=1, max_length=72)
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str = Field(max_length=72)
+    current_password: str = Field(min_length=1, max_length=72)
     new_password: str = Field(min_length=1, max_length=72)
 
 

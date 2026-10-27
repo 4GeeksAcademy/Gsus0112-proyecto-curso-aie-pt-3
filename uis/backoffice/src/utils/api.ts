@@ -2,7 +2,7 @@ const TOKEN_STORAGE_KEY = 'trackflow_token';
 const LOGIN_PATH = '/login';
 
 /** Resuelve la URL de la API: variable de entorno, puerto 8000 del Codespace o localhost. */
-function resolveApiBaseUrl(): string {
+export function resolveApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL;
   if (configured) {
     return configured.replace(/\/$/, '');
