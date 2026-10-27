@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 
@@ -40,14 +41,40 @@ async function apiRequest(path: string, init: RequestInit = {}): Promise<Respons
     headers: { 'Content-Type': 'application/json', ...init.headers },
   });
   if (!response.ok) {
-    const body: { detail?: string | { loc: (string | number)[]; msg: string }[] } =
+    const body: { detail?: string | { loc?: (string | number)[]; msg?: string }[] } =
       await response.json().catch(() => ({}));
-    const detail = Array.isArray(body.detail)
-      ? body.detail.map((item) => `${item.loc.slice(1).join('.')}: ${item.msg}`).join('; ')
-      : body.detail ?? 'La solicitud no pudo completarse.';
-    throw new Error(`Error ${response.status}: ${detail}`);
+
+    if (response.status === 404) {
+      throw new Error('El proveedor solicitado ya no se encuentra en el directorio.');
+    }
+    if (response.status === 422 || response.status === 400) {
+      const detail = Array.isArray(body?.detail)
+        ? body.detail
+            .map((item) => {
+              const field = (item?.loc ?? []).slice(1).join('.');
+              const msg = item?.msg ?? 'valor inválido';
+              return field ? `${field}: ${msg}` : msg;
+            })
+            .join('; ')
+        : typeof body?.detail === 'string'
+          ? body.detail
+          : 'Algunos datos del proveedor no son válidos.';
+      throw new Error(`Revisa los datos ingresados (${detail}).`);
+    }
+    throw new Error(
+      'No pudimos completar la operación en el directorio de proveedores. Por favor, inténtalo de nuevo.',
+    );
   }
   return response;
+}
+
+async function parseSuppliersList(response: Response): Promise<Supplier[]> {
+  try {
+    const data: unknown = await response.json();
+    return Array.isArray(data) ? (data as Supplier[]) : [];
+  } catch {
+    throw new Error('La respuesta del servidor no tiene un formato válido. Por favor, intenta recargar.');
+  }
 }
 
 function SupplierDirectory(): ReactElement {
@@ -66,7 +93,7 @@ function SupplierDirectory(): ReactElement {
     setLoadFailed(false);
     setError(null);
     void apiRequest(query, { signal: controller.signal })
-      .then((response) => response.json() as Promise<Supplier[]>)
+      .then((response) => parseSuppliersList(response))
       .then((data) => { if (!controller.signal.aborted) setSuppliers(data); })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) {
@@ -131,7 +158,23 @@ function SupplierDirectory(): ReactElement {
       <Sidebar />
       <main className="mx-auto min-w-0 max-w-7xl px-4 py-8 sm:px-6">
         <h1 className="mb-6 text-2xl font-bold text-slate-900">Directorio de Proveedores</h1>
-        {error && <p role="alert" className="mb-4 border-l-4 border-red-600 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        {error && (
+          <div role="alert" className="mb-4 rounded-lg border-l-4 border-red-600 bg-red-50 p-4 text-sm text-red-800">
+            <p className="font-semibold">{error}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setReload((value) => value + 1)}
+                className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+              >
+                Reintentar
+              </button>
+              <Link href="/" className="text-xs font-semibold text-red-800 underline hover:text-red-950">
+                Volver al Centro de Control
+              </Link>
+            </div>
+          </div>
+        )}
         {success && <p role="status" className="mb-4 border-l-4 border-emerald-600 bg-emerald-50 p-3 text-sm text-emerald-800">{success}</p>}
 
         <section className="border-y border-slate-200 py-6" aria-labelledby="new-supplier-heading">
@@ -170,12 +213,31 @@ function SupplierDirectory(): ReactElement {
               </tr></thead>
               <tbody>
                 {loading || loadFailed || suppliers.length === 0 ? (
-                  <tr><td colSpan={9} className="p-8 text-center text-slate-500">{loading ? 'Cargando proveedores...' : loadFailed ? 'No se pudieron cargar los proveedores.' : 'No hay proveedores para estos filtros.'}</td></tr>
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-slate-500">
+                      {loading ? (
+                        'Cargando proveedores...'
+                      ) : loadFailed ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <span>No se pudieron cargar los proveedores.</span>
+                          <button
+                            type="button"
+                            onClick={() => setReload((value) => value + 1)}
+                            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Reintentar carga
+                          </button>
+                        </div>
+                      ) : (
+                        'No hay proveedores para estos filtros.'
+                      )}
+                    </td>
+                  </tr>
                 ) : suppliers.map((supplier) => (
                   <tr key={supplier.id} className="border-b border-slate-200 align-top">
-                    <td className="max-w-48 break-words p-3 font-medium">{supplier.name}</td>
-                    <td className="p-3">{supplier.country}</td>
-                    <td className="max-w-40 break-words p-3">{supplier.categories.join(', ')}</td>
+                    <td className="max-w-48 break-words p-3 font-medium">{supplier.name ?? '—'}</td>
+                    <td className="p-3">{supplier.country ?? '—'}</td>
+                    <td className="max-w-40 break-words p-3">{(supplier.categories ?? []).join(', ') || '—'}</td>
                     <td className="p-3">
                       <form className="flex items-center gap-2" onSubmit={(event) => {
                         event.preventDefault();

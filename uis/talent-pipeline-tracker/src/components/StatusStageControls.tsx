@@ -129,7 +129,18 @@ export default function StatusStageControls({
       <div className="mt-3 min-h-6 text-sm">
         {isUpdating ? <p className="text-slate-600">Actualizando...</p> : null}
         {!isUpdating && successMessage ? <p className="text-emerald-700">✓ {successMessage}</p> : null}
-        {!isUpdating && errorMessage ? <p className="text-rose-700">{errorMessage}</p> : null}
+        {!isUpdating && errorMessage ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
+            <span>{errorMessage}</span>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-xs font-semibold text-rose-800 underline hover:text-rose-950"
+            >
+              Entendido, volver a intentar
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

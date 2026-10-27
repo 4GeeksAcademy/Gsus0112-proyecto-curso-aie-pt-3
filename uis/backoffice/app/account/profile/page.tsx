@@ -28,9 +28,9 @@ const inputClassName =
 function ProfileForm({ user }: { user: AuthUser }): ReactElement {
   const { refreshUser, logout } = useAuth();
   const [values, setValues] = useState<ProfileValues>({
-    name: user.name,
-    phone: user.phone,
-    address: user.address,
+    name: user?.name ?? '',
+    phone: user?.phone ?? '',
+    address: user?.address ?? '',
   });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,8 +41,7 @@ function ProfileForm({ user }: { user: AuthUser }): ReactElement {
     setFeedback(null);
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
+  const saveProfile = async (): Promise<void> => {
     setFeedback(null);
     setIsSubmitting(true);
     try {
@@ -50,9 +49,9 @@ function ProfileForm({ user }: { user: AuthUser }): ReactElement {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: values.name.trim(),
-          phone: values.phone.trim(),
-          address: values.address.trim(),
+          name: (values.name ?? '').trim(),
+          phone: (values.phone ?? '').trim(),
+          address: (values.address ?? '').trim(),
         }),
       });
       if (!response.ok) {
@@ -60,8 +59,8 @@ function ProfileForm({ user }: { user: AuthUser }): ReactElement {
           type: 'error',
           message:
             response.status === 422
-              ? 'Algunos datos no son válidos. Revisa el formulario.'
-              : `No se pudo guardar el perfil (HTTP ${response.status}).`,
+              ? 'Algunos datos no son válidos. Revisa los campos del formulario.'
+              : 'No se pudieron guardar los cambios de tu perfil en este momento.',
         });
         return;
       }
@@ -72,6 +71,11 @@ function ProfileForm({ user }: { user: AuthUser }): ReactElement {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    await saveProfile();
   };
 
   return (
@@ -85,7 +89,22 @@ function ProfileForm({ user }: { user: AuthUser }): ReactElement {
               : 'border-red-200 bg-red-50 text-red-700'
           }`}
         >
-          {feedback.message}
+          <p className="font-medium">{feedback.message}</p>
+          {feedback.type === 'error' && (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void saveProfile()}
+                disabled={isSubmitting}
+                className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                Reintentar guardado
+              </button>
+              <Link href="/" className="text-xs font-semibold text-red-800 underline hover:text-red-950">
+                Volver al centro de control
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

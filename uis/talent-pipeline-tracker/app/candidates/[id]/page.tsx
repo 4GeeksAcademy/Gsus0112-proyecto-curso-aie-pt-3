@@ -50,6 +50,8 @@ export default function CandidateDetailPage() {
 
   useEffect(() => {
     if (!candidateId) {
+      setIsLoading(false);
+      setErrorMessage('No se especificó un identificador de candidatura válido.');
       return;
     }
 
@@ -109,15 +111,20 @@ export default function CandidateDetailPage() {
           <section className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900 shadow-sm">
             <p className="font-semibold">No fue posible cargar el detalle de la candidatura.</p>
             <p className="mt-1 text-sm">{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setRetryCount((previous) => previous + 1);
-              }}
-              className="mt-4 inline-flex rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700"
-            >
-              Reintentar
-            </button>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRetryCount((previous) => previous + 1);
+                }}
+                className="inline-flex rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700"
+              >
+                Reintentar
+              </button>
+              <Link href="/" className="text-sm font-semibold text-rose-800 underline hover:text-rose-950">
+                Volver al listado principal
+              </Link>
+            </div>
           </section>
         ) : null}
 

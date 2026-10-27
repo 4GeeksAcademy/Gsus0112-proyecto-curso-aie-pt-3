@@ -43,7 +43,7 @@ function ChangePasswordForm(): ReactElement {
               ? 'La contraseña actual no es correcta.'
               : response.status === 422
                 ? 'La contraseña no es válida (máximo 72 caracteres).'
-                : `No se pudo cambiar la contraseña (HTTP ${response.status}).`,
+                : 'No pudimos actualizar tu contraseña en este momento. Inténtalo de nuevo más tarde.',
         });
         return;
       }
@@ -69,7 +69,17 @@ function ChangePasswordForm(): ReactElement {
               : 'border-red-200 bg-red-50 text-red-700'
           }`}
         >
-          {feedback.message}
+          <p className="font-medium">{feedback.message}</p>
+          {feedback.type === 'error' && (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+              <Link href="/forgot-password" className="font-semibold text-red-800 underline hover:text-red-950">
+                ¿Olvidaste tu contraseña actual?
+              </Link>
+              <Link href="/account/profile" className="font-semibold text-red-800 underline hover:text-red-950">
+                Volver a mi perfil
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

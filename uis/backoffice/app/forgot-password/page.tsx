@@ -14,22 +14,37 @@ export default function ForgotPasswordPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
+  const sendRecoveryRequest = async (): Promise<void> => {
+    if (!email.trim()) return;
+    setError(null);
     setIsSubmitting(true);
     try {
-      await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       });
+      if (response.status >= 500) {
+        setError(
+          'El servicio de recuperación no está disponible en este momento. Por favor, inténtalo de nuevo.',
+        );
+        return;
+      }
+      setIsSent(true);
     } catch {
-      // The outcome is intentionally hidden to avoid revealing which emails exist.
+      setError(
+        'No se pudo conectar con el servidor para enviar el enlace. Verifica tu conexión e inténtalo de nuevo.',
+      );
     } finally {
       setIsSubmitting(false);
-      setIsSent(true);
     }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    await sendRecoveryRequest();
   };
 
   return (
@@ -45,6 +60,25 @@ export default function ForgotPasswordPage(): ReactElement {
           onSubmit={handleSubmit}
           className="space-y-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
         >
+          {error && (
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p className="font-medium">{error}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void sendRecoveryRequest()}
+                  disabled={isSubmitting}
+                  className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  Reintentar envío
+                </button>
+                <Link href="/login" className="text-xs font-semibold text-red-800 underline hover:text-red-950">
+                  Volver al inicio de sesión
+                </Link>
+              </div>
+            </div>
+          )}
+
           {isSent && (
             <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
               Si esa dirección está registrada, recibirás un enlace en breve

@@ -53,7 +53,7 @@ function ResetPasswordForm(): ReactElement {
           message:
             response.status === 400
               ? 'El enlace no es válido o ha caducado.'
-              : `No se pudo restablecer la contraseña (HTTP ${response.status}).`,
+              : 'No pudimos restablecer la contraseña en este momento. Solicita un nuevo enlace o inténtalo más tarde.',
         });
         return;
       }

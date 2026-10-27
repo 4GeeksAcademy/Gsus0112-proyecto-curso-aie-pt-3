@@ -105,7 +105,7 @@ export function IncidentSummaryPanel({
                 Total por Estado (status)
               </h4>
               <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-800">
-                Total global: {summary.total}
+                Total global: {summary?.total ?? 0}
               </span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

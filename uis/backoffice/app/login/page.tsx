@@ -55,7 +55,15 @@ export default function LoginPage(): ReactElement {
         >
           {error && (
             <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
+              <p className="font-medium">{error}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                <Link href="/forgot-password" className="font-semibold text-red-800 underline hover:text-red-950">
+                  Recuperar contraseña
+                </Link>
+                <span className="text-red-600">
+                  ¿Problemas para acceder? Contacta a soporte@trackflow.com
+                </span>
+              </div>
             </div>
           )}
 

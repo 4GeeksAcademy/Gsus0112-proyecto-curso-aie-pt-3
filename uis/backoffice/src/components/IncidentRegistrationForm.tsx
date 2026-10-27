@@ -187,6 +187,24 @@ export function IncidentRegistrationForm({
         >
           <p className="font-semibold">No se pudo guardar la incidencia</p>
           <p className="mt-1 text-rose-800">{generalError}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setGeneralError(null)}
+              className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
+            >
+              Revisar datos y reintentar
+            </button>
+            <a
+              href="/incidents"
+              className="text-xs font-semibold text-rose-800 underline hover:text-rose-950"
+            >
+              Ir al listado de incidencias
+            </a>
+            <span className="text-xs text-rose-700">
+              Si el problema persiste, contacta con soporte técnico (soporte@trackflow.com).
+            </span>
+          </div>
         </div>
       ) : null}
 
