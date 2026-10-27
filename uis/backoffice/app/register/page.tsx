@@ -48,19 +48,23 @@ async function parseApiError(response: Response): Promise<{ fieldErrors: FieldEr
     const fieldErrors: FieldErrors = {};
     const general: string[] = [];
     for (const issue of detail as ValidationIssue[]) {
-      const field = issue.loc[issue.loc.length - 1];
+      const loc = issue?.loc ?? [];
+      const field = loc[loc.length - 1];
       if (isFieldName(field)) {
-        fieldErrors[field] ??= issue.msg;
-      } else {
+        fieldErrors[field] ??= issue?.msg ?? 'Valor no válido.';
+      } else if (issue?.msg) {
         general.push(issue.msg);
       }
     }
-    return { fieldErrors, message: general.join(' ') || 'Revisa los campos marcados.' };
+    return { fieldErrors, message: general.join(' ') || 'Revisa los campos marcados e inténtalo de nuevo.' };
   }
 
   return {
     fieldErrors: {},
-    message: typeof detail === 'string' ? detail : `No se pudo completar el registro (HTTP ${response.status}).`,
+    message:
+      typeof detail === 'string' && response.status < 500
+        ? detail
+        : 'No pudimos completar el registro en este momento. Por favor, inténtalo de nuevo en unos segundos.',
   };
 }
 
@@ -148,7 +152,15 @@ export default function RegisterPage(): ReactElement {
         >
           {error && (
             <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
+              <p className="font-medium">{error}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                <Link href="/login" className="font-semibold text-red-800 underline hover:text-red-950">
+                  Ir a iniciar sesión
+                </Link>
+                <span className="text-red-600">
+                  Si necesitas ayuda, escribe a soporte@trackflow.com
+                </span>
+              </div>
             </div>
           )}
 

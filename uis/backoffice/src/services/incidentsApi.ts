@@ -112,7 +112,15 @@ export async function fetchIncidents(filters?: IncidentFilters): Promise<Inciden
     throw new ApiValidationError(message, response.status, field);
   }
 
-  const data: unknown = await response.json();
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new ApiValidationError(
+      'La respuesta del servidor no tiene un formato válido. Inténtalo de nuevo.',
+      response.status,
+    );
+  }
   if (Array.isArray(data)) {
     return data as Incident[];
   }
@@ -147,7 +155,14 @@ export async function fetchIncidentById(id: number): Promise<Incident> {
     throw new ApiValidationError(message, response.status, field);
   }
 
-  return (await response.json()) as Incident;
+  try {
+    return (await response.json()) as Incident;
+  } catch {
+    throw new ApiValidationError(
+      'No se pudo interpretar el detalle de la incidencia devuelto por el servidor.',
+      response.status,
+    );
+  }
 }
 
 /** Crea una nueva incidencia mediante POST /api/incidents. */
@@ -178,7 +193,14 @@ export async function createIncidentRequest(input: IncidentCreateInput): Promise
     throw new ApiValidationError(message, response.status, field);
   }
 
-  return (await response.json()) as Incident;
+  try {
+    return (await response.json()) as Incident;
+  } catch {
+    throw new ApiValidationError(
+      'La incidencia fue enviada, pero la respuesta del servidor no pudo procesarse.',
+      response.status,
+    );
+  }
 }
 
 /** Actualiza el estado de una incidencia mediante PATCH /api/incidents/{id}/status. */
@@ -212,7 +234,14 @@ export async function updateIncidentStatusRequest(
     throw new ApiValidationError(message, response.status, field);
   }
 
-  return (await response.json()) as Incident;
+  try {
+    return (await response.json()) as Incident;
+  } catch {
+    throw new ApiValidationError(
+      'El estado se envió pero la respuesta del servidor no tiene el formato esperado.',
+      response.status,
+    );
+  }
 }
 
 /** Obtiene las métricas agregadas desde GET /api/incidents/summary. */
@@ -243,5 +272,12 @@ export async function fetchIncidentsSummary(): Promise<IncidentSummary> {
     throw new ApiValidationError(message, response.status, field);
   }
 
-  return (await response.json()) as IncidentSummary;
+  try {
+    return (await response.json()) as IncidentSummary;
+  } catch {
+    throw new ApiValidationError(
+      'No se pudieron procesar las métricas agregadas devueltas por el servidor.',
+      response.status,
+    );
+  }
 }

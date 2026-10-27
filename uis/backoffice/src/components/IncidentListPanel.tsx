@@ -259,20 +259,34 @@ export function IncidentListPanel({
       {statusFeedback ? (
         <div
           role="alert"
-          className={`mb-5 flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${
+          className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${
             statusFeedback.type === 'error'
               ? 'border-rose-200 bg-rose-50 text-rose-900'
               : 'border-emerald-200 bg-emerald-50 text-emerald-900'
           }`}
         >
           <span>{statusFeedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setStatusFeedback(null)}
-            className="text-xs font-bold underline"
-          >
-            Cerrar
-          </button>
+          <div className="flex items-center gap-3">
+            {statusFeedback.type === 'error' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFeedback(null);
+                  setRetryCounter((c) => c + 1);
+                }}
+                className="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700"
+              >
+                Recargar listado
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setStatusFeedback(null)}
+              className="text-xs font-bold underline"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       ) : null}
 

@@ -20,22 +20,23 @@ def send_password_reset_email(to_email: str, token: str) -> None:
 
     # Asignamos la clave fresca a la librería
     resend.api_key = api_key
-    
+
     link = html.escape(f"{RESET_PASSWORD_URL}?token={quote(token, safe='')}", quote=True)
+    email_payload = {
+        "from": RESEND_FROM_EMAIL,
+        "to": [to_email],
+        "subject": "Recupera tu contraseña de TrackFlow",
+        "html": (
+            "<p>Hemos recibido una solicitud para restablecer tu contraseña.</p>"
+            f'<p><a href="{link}">Restablecer contraseña</a></p>'
+            "<p>El enlace caduca en breve. Si no fuiste tú, ignora este mensaje.</p>"
+        ),
+    }
     try:
-        print(f"---> LA CLAVE QUE LEE PYTHON ES: '{resend.api_key}' <---")
-        resend.Emails.send(
-            {
-                "from": RESEND_FROM_EMAIL, 
-                "to": [to_email],
-                "subject": "Recupera tu contraseña de TrackFlow",
-                "html": (
-                    "<p>Hemos recibido una solicitud para restablecer tu contraseña.</p>"
-                    f'<p><a href="{link}">Restablecer contraseña</a></p>'
-                    "<p>El enlace caduca en breve. Si no fuiste tú, ignora este mensaje.</p>"
-                ),
-            }
+        resend.Emails.send(email_payload)
+    except Exception as exc:
+        # Never leak delivery failures, API keys, or reset tokens to logs or clients.
+        logger.error(
+            "Error al enviar el email de recuperación de contraseña (%s).",
+            type(exc).__name__,
         )
-    except Exception:
-        # Never leak delivery failures to the client; the endpoint always answers 200.
-        logger.exception("Error al enviar el email de recuperación de contraseña")

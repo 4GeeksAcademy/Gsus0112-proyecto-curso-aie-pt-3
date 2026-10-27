@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+import type { DragEvent, ReactElement } from 'react';
 
-const API_BASE_URL = "https://glowing-waddle-g94rq7qj7gr3w56q-8000.app.github.dev";
+import { API_BASE_URL } from '../utils/api';
 
 const REASON_LABELS: Record<string, string> = {
-  INVALID_COUNTRY: "País no permitido",
-  MISSING_CARRIER: "Transportista vacío",
-  CARRIER_COUNTRY_MISMATCH: "Transportista no válido para el país",
-  INVALID_TRACKING_NUMBER: "Número de seguimiento demasiado corto",
-  INVALID_CATEGORY: "Categoría no válida",
-  DESCRIPTION_TOO_SHORT: "Descripción demasiado corta",
-  INVALID_EMAIL: "Email sin arroba",
-  MISSING_SATISFACTION_SCORE: "Falta puntuación en incidencia cerrada",
-  INVALID_SATISFACTION_SCORE: "Puntuación fuera del rango 1-5"
+  INVALID_COUNTRY: 'País no permitido',
+  MISSING_CARRIER: 'Transportista vacío',
+  CARRIER_COUNTRY_MISMATCH: 'Transportista no válido para el país',
+  INVALID_TRACKING_NUMBER: 'Número de seguimiento demasiado corto',
+  INVALID_CATEGORY: 'Categoría no válida',
+  DESCRIPTION_TOO_SHORT: 'Descripción demasiado corta',
+  INVALID_EMAIL: 'Email sin arroba',
+  MISSING_SATISFACTION_SCORE: 'Falta puntuación en incidencia cerrada',
+  INVALID_SATISFACTION_SCORE: 'Puntuación fuera del rango 1-5',
 };
 
 type AnalysisResults = {
@@ -24,67 +25,98 @@ type AnalysisResults = {
   average_satisfaction: number | null;
 };
 
-export function IncidentsAnalysis() {
+/** Componente de carga y análisis de ficheros CSV de incidencias logísticas. */
+export function IncidentsAnalysis(): ReactElement {
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [filename, setFilename] = useState<string>('');
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const analyzeFile = async (file?: File) => {
+  const analyzeFile = async (file?: File): Promise<void> => {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      setErrorMsg("Selecciona un archivo con extensión .csv.");
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setErrorMsg('Selecciona un archivo válido con extensión .csv para poder analizarlo.');
       return;
     }
 
+    setLastFile(file);
     setLoading(true);
     setErrorMsg('');
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
+
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/incidents/analyze`, {
+        method: 'POST',
+        body: formData,
+      });
+    } catch {
+      setErrorMsg(
+        'No se pudo conectar con el servidor de análisis. Verifica tu conexión o que la API esté activa e inténtalo de nuevo.',
+      );
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/incidents/analyze`, {
-        method: "POST",
-        body: formData
-      });
       if (!response.ok) {
-        throw new Error(`El análisis no se completó (HTTP ${response.status}). Asegúrate de que el puerto 8000 esté en 'Público'.`);
+        const errorPayload: { detail?: string } | null = await response.json().catch(() => null);
+        const detail = typeof errorPayload?.detail === 'string' ? errorPayload.detail : null;
+        setErrorMsg(
+          response.status === 400 && detail
+            ? detail
+            : 'No pudimos procesar el archivo CSV en este momento. Revisa que el formato sea correcto e inténtalo de nuevo.',
+        );
+        return;
       }
-      const data = await response.json();
+
+      let data: AnalysisResults;
+      try {
+        data = (await response.json()) as AnalysisResults;
+      } catch {
+        setErrorMsg(
+          'La respuesta del servidor no tiene un formato válido. Por favor, vuelve a intentarlo.',
+        );
+        return;
+      }
+
       setResults(data);
       setFilename(file.name);
-    } catch (error: any) {
-      setErrorMsg(error instanceof TypeError ? "No se pudo conectar con la API (Asegúrate de que el puerto 8000 sea Público)." : error.message);
     } finally {
       setLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      analyzeFile(e.dataTransfer.files[0]);
+    const droppedFile = e.dataTransfer?.files?.[0];
+    if (droppedFile) {
+      void analyzeFile(droppedFile);
     }
   };
 
-  const reset = () => {
+  const reset = (): void => {
     setResults(null);
     setFilename('');
     setErrorMsg('');
+    setLastFile(null);
   };
 
   return (
@@ -119,7 +151,33 @@ export function IncidentsAnalysis() {
             <p className="mt-1 text-xs text-slate-500">o haz clic para seleccionarlo desde tu equipo</p>
             
             {loading && <p className="mt-4 text-sm font-semibold text-emerald-600 animate-pulse">Analizando archivo...</p>}
-            {errorMsg && <p className="mt-4 text-sm font-medium text-red-600 bg-red-50 px-3 py-2 rounded">{errorMsg}</p>}
+            {errorMsg && (
+              <div
+                role="alert"
+                onClick={(e) => e.stopPropagation()}
+                className="mt-4 w-full max-w-md rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700"
+              >
+                <p className="font-semibold">{errorMsg}</p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  {lastFile ? (
+                    <button
+                      type="button"
+                      onClick={() => void analyzeFile(lastFile)}
+                      className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                    >
+                      Reintentar análisis
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                  >
+                    Seleccionar otro archivo
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -127,7 +185,7 @@ export function IncidentsAnalysis() {
           <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">Análisis completado</p>
-              <h3 className="text-lg font-bold text-slate-900">{filename}</h3>
+              <h3 className="text-lg font-bold text-slate-900">{filename || 'Archivo CSV'}</h3>
             </div>
             <div className="flex w-full gap-3 sm:w-auto">
               <button 
@@ -148,16 +206,18 @@ export function IncidentsAnalysis() {
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">Total de registros</p>
-              <p className="mt-2 text-3xl font-extrabold text-slate-900">{results.total_records.toLocaleString("es-ES")}</p>
+              <p className="mt-2 text-3xl font-extrabold text-slate-900">{(results?.total_records ?? 0).toLocaleString('es-ES')}</p>
             </div>
             <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4">
               <p className="text-sm font-medium text-emerald-800">Registros válidos</p>
-              <p className="mt-2 text-3xl font-extrabold text-emerald-700">{results.valid_records.toLocaleString("es-ES")}</p>
+              <p className="mt-2 text-3xl font-extrabold text-emerald-700">{(results?.valid_records ?? 0).toLocaleString('es-ES')}</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">Satisfacción promedio</p>
               <p className="mt-2 text-3xl font-extrabold text-slate-900">
-                {results.average_satisfaction === null ? "N/D" : `${results.average_satisfaction.toLocaleString("es-ES")} / 5`}
+                {results?.average_satisfaction === null || results?.average_satisfaction === undefined
+                  ? 'N/D'
+                  : `${results.average_satisfaction.toLocaleString('es-ES')} / 5`}
               </p>
             </div>
           </div>
@@ -166,20 +226,20 @@ export function IncidentsAnalysis() {
             <div className="mb-4 flex items-center justify-between">
               <h4 className="font-bold text-slate-900">Registros inválidos</h4>
               <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
-                {results.invalid_records.toLocaleString("es-ES")} encontrados
+                {(results?.invalid_records ?? 0).toLocaleString('es-ES')} encontrados
               </span>
             </div>
             
-            {Object.keys(results.invalid_reasons).length === 0 ? (
+            {Object.keys(results?.invalid_reasons ?? {}).length === 0 ? (
               <p className="text-sm text-slate-500">No se encontraron problemas de validación.</p>
             ) : (
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-                {Object.entries(results.invalid_reasons)
+                {Object.entries(results?.invalid_reasons ?? {})
                   .sort((a, b) => b[1] - a[1])
                   .map(([reason, count]) => (
                     <li key={reason} className="flex items-center justify-between p-4">
-                      <span className="text-sm font-medium text-slate-700">{REASON_LABELS[reason] || reason}</span>
-                      <span className="font-mono text-sm font-bold text-slate-900">{count.toLocaleString("es-ES")}</span>
+                      <span className="text-sm font-medium text-slate-700">{REASON_LABELS[reason] ?? reason}</span>
+                      <span className="font-mono text-sm font-bold text-slate-900">{(count ?? 0).toLocaleString('es-ES')}</span>
                     </li>
                   ))}
               </ul>

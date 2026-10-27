@@ -20,15 +20,33 @@ export function getToken(): string | null {
   if (typeof window === 'undefined') {
     return null;
   }
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  try {
+    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function setToken(token: string): void {
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } catch {
+    // Ignore storage quota or privacy-mode restrictions gracefully.
+  }
 }
 
 export function clearToken(): void {
-  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // Ignore storage restrictions gracefully.
+  }
 }
 
 /** Ejecuta `fetch` contra la API añadiendo el token JWT y gestionando la expiración de sesión. */
@@ -39,12 +57,20 @@ export async function fetchWithAuth(path: string, init: RequestInit = {}): Promi
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error;
+    }
+    throw new Error('No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.');
+  }
 
   if (response.status === 401) {
     clearToken();
     // Avoids a reload loop if the login page itself triggers a 401.
-    if (window.location.pathname !== LOGIN_PATH) {
+    if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
       window.location.href = LOGIN_PATH;
     }
   }

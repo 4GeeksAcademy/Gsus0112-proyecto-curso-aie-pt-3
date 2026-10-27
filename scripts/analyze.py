@@ -39,11 +39,30 @@ def main():
         print(f"Usage: python {Path(__file__).name} <incidents.csv>", file=sys.stderr)
         return 2
 
+    csv_path = Path(sys.argv[1])
+    if not csv_path.exists() or not csv_path.is_file():
+        print(f"Error: no se encontró el archivo CSV '{csv_path.name}'.", file=sys.stderr)
+        return 1
+
     try:
-        with open(sys.argv[1], newline="", encoding="utf-8-sig") as input_file:
-            results = process_csv_data(input_file)
+        raw_content = csv_path.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeError) as error:
         print(f"Could not read CSV: {error}", file=sys.stderr)
+        return 1
+
+    if not raw_content.strip():
+        print("Error: el archivo CSV está vacío.", file=sys.stderr)
+        return 1
+
+    try:
+        with csv_path.open(newline="", encoding="utf-8-sig") as input_file:
+            results = process_csv_data(input_file)
+    except (OSError, UnicodeError, csv.Error) as error:
+        print(f"Could not process CSV data: {error}", file=sys.stderr)
+        return 1
+
+    if not isinstance(results, dict) or "total_records" not in results:
+        print("Error: el resultado del análisis tiene un formato inválido.", file=sys.stderr)
         return 1
 
     print("Incident analysis")

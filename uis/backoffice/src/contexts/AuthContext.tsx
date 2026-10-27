@@ -34,11 +34,30 @@ type LoginResponse = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchCurrentUser(): Promise<AuthUser | null> {
-  const response = await fetchWithAuth('/auth/me');
+  let response: Response;
+  try {
+    response = await fetchWithAuth('/auth/me');
+  } catch {
+    return null;
+  }
   if (!response.ok) {
     return null;
   }
-  return (await response.json()) as AuthUser;
+  try {
+    const data = (await response.json()) as Partial<AuthUser> | null;
+    if (!data || typeof data.email !== 'string') {
+      return null;
+    }
+    return {
+      email: data.email,
+      role: data.role ?? 'user',
+      name: data.name ?? '',
+      phone: data.phone ?? '',
+      address: data.address ?? '',
+    };
+  } catch {
+    return null;
+  }
 }
 
 type AuthProviderProps = {
@@ -81,16 +100,37 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     // A failed login returns 401, so it must not go through fetchWithAuth's redirect.
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ username: email, password }),
-    });
-    if (!response.ok) {
-      throw new Error(response.status === 401 ? 'Email o contraseña incorrectos.' : `Error al iniciar sesión (HTTP ${response.status}).`);
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: email, password }),
+      });
+    } catch {
+      throw new Error('No se pudo conectar con la API. Comprueba que el servidor está en marcha.');
     }
 
-    const { access_token: accessToken } = (await response.json()) as LoginResponse;
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401
+          ? 'Email o contraseña incorrectos.'
+          : 'No pudimos iniciar tu sesión en este momento. Por favor, inténtalo de nuevo en unos segundos.',
+      );
+    }
+
+    let data: Partial<LoginResponse> | null = null;
+    try {
+      data = (await response.json()) as Partial<LoginResponse>;
+    } catch {
+      throw new Error('La respuesta del servidor no pudo procesarse. Inténtalo de nuevo.');
+    }
+
+    const accessToken = data?.access_token ?? '';
+    if (!accessToken) {
+      throw new Error('No se recibió un token de sesión válido. Inténtalo de nuevo.');
+    }
+
     storeToken(accessToken);
     setToken(accessToken);
     setUser(await fetchCurrentUser());
@@ -104,7 +144,12 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
   }, [router]);
 
   const refreshUser = useCallback(async (): Promise<void> => {
-    setUser(await fetchCurrentUser());
+    try {
+      const currentUser = await fetchCurrentUser();
+      setUser(currentUser);
+    } catch {
+      // Keep existing user state if background refresh fails.
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(

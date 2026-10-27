@@ -123,7 +123,19 @@ export default function NotesSection({ candidateId }: NotesSectionProps) {
       </form>
 
       {errorMessage ? (
-        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{errorMessage}</div>
+        <div
+          role="alert"
+          className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+        >
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => void loadNotes()}
+            className="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700"
+          >
+            Reintentar
+          </button>
+        </div>
       ) : null}
 
       {successMessage ? (

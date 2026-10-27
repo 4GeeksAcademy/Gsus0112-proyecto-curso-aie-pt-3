@@ -30,19 +30,30 @@ FORGOT_PASSWORD_MESSAGE = (
 
 
 def _set_password(user_id: int, new_password: str) -> None:
-    users.update(
-        {
-            "hashed_password": get_password_hash(new_password),
-            "password_changed_at": datetime.now(timezone.utc).isoformat(),
-        },
-        doc_ids=[user_id],
-    )
+    payload = {
+        "hashed_password": get_password_hash(new_password),
+        "password_changed_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        users.update(payload, doc_ids=[user_id])
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo actualizar la contraseña en este momento.",
+        ) from exc
 
 
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
-    user = users.get(Query().email == form_data.username)
-    if user is None or not verify_password(form_data.password, user["hashed_password"]):
+    try:
+        user = users.get(Query().email == form_data.username)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo procesar el inicio de sesión en este momento.",
+        ) from exc
+
+    if user is None or not verify_password(form_data.password, user.get("hashed_password", "")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
@@ -54,7 +65,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
 
 @router.get("/me")
 def read_me(current_user: UserDB = Depends(get_current_user)) -> dict[str, Any]:
-    profile = profiles.get(Query().user_id == current_user.id) or {}
+    try:
+        profile = profiles.get(Query().user_id == current_user.id) or {}
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo consultar el perfil del usuario en este momento.",
+        ) from exc
+
     return {
         "email": current_user.email,
         "role": current_user.role,
@@ -68,7 +86,11 @@ def read_me(current_user: UserDB = Depends(get_current_user)) -> dict[str, Any]:
 def forgot_password(
     body: ForgotPasswordRequest, background_tasks: BackgroundTasks
 ) -> dict[str, str]:
-    user = users.get(Query().email == body.email)
+    try:
+        user = users.get(Query().email == body.email)
+    except OSError:
+        user = None
+
     if user is not None and user.get("is_active", True):
         token = create_password_reset_token(user.doc_id)
         # Sent after the response so timing does not reveal whether the email exists.
@@ -86,12 +108,24 @@ def reset_password(body: ResetPasswordRequest) -> dict[str, str]:
         raise invalid_token
     user_id, issued_at = decoded
 
-    user = users.get(doc_id=user_id)
+    try:
+        user = users.get(doc_id=user_id)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo restablecer la contraseña en este momento.",
+        ) from exc
+
     if user is None or not user.get("is_active", True):
         raise invalid_token
     changed_at = user.get("password_changed_at")
-    if changed_at and issued_at < datetime.fromisoformat(changed_at).timestamp():
-        raise invalid_token
+    if changed_at:
+        try:
+            changed_ts = datetime.fromisoformat(str(changed_at)).timestamp()
+        except (ValueError, TypeError):
+            raise invalid_token
+        if issued_at < changed_ts:
+            raise invalid_token
 
     _set_password(user_id, body.new_password)
     return {"detail": "Contraseña restablecida correctamente"}

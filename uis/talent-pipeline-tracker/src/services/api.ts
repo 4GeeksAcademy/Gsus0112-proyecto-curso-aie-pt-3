@@ -60,12 +60,17 @@ function extractItem<T>(payload: unknown, context: string): T {
 
 function buildUrl(path: string, params?: RecordQueryParams): string {
   if (!API_BASE_URL) {
-    throw new Error('NEXT_PUBLIC_API_URL no está definida en las variables de entorno.');
+    throw new Error('El servicio de candidaturas no está disponible en este momento. Contacta con soporte técnico.');
   }
 
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
   const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`;
-  const url = new URL(normalizedPath, baseUrl);
+  let url: URL;
+  try {
+    url = new URL(normalizedPath, baseUrl);
+  } catch {
+    throw new Error('La dirección del servicio de candidaturas no es válida. Contacta con soporte técnico.');
+  }
 
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -78,106 +83,160 @@ function buildUrl(path: string, params?: RecordQueryParams): string {
   return url.toString();
 }
 
+async function executeFetch(url: string, init: RequestInit, context: string): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new Error(`${context}: no se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.`);
+  }
+}
+
 async function handleResponse<T>(response: Response, context: string): Promise<T> {
   if (!response.ok) {
-    throw new Error(`${context}: ${response.status} ${response.statusText}`);
+    if (response.status === 404) {
+      throw new Error(`${context}: el registro solicitado ya no existe o no fue encontrado.`);
+    }
+    if (response.status === 400 || response.status === 422) {
+      throw new Error(`${context}: revisa los datos ingresados, algunos campos no son válidos.`);
+    }
+    throw new Error(`${context}: el servidor no pudo procesar la solicitud en este momento. Inténtalo de nuevo.`);
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(`${context}: la respuesta del servidor no pudo interpretarse correctamente.`);
+  }
 }
 
 export async function getRecords(params?: RecordQueryParams): Promise<CandidateRecord[]> {
-  const response = await fetch(buildUrl('records', params), {
-    method: 'GET',
-    headers: JSON_HEADERS,
-  });
+  const response = await executeFetch(
+    buildUrl('records', params),
+    {
+      method: 'GET',
+      headers: JSON_HEADERS,
+    },
+    'No se pudieron obtener las candidaturas',
+  );
 
-  const payload = await handleResponse<unknown>(response, 'Error al obtener candidatos');
-  return extractList<CandidateRecord>(payload, 'Error al obtener candidatos');
+  const payload = await handleResponse<unknown>(response, 'No se pudieron obtener las candidaturas');
+  return extractList<CandidateRecord>(payload, 'No se pudieron obtener las candidaturas');
 }
 
 export async function getRecordById(id: string): Promise<CandidateRecord> {
-  const response = await fetch(buildUrl(`records/${id}`), {
-    method: 'GET',
-    headers: JSON_HEADERS,
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${id}`),
+    {
+      method: 'GET',
+      headers: JSON_HEADERS,
+    },
+    'No se pudo obtener el detalle de la candidatura',
+  );
 
-  const payload = await handleResponse<unknown>(response, `Error al obtener candidato ${id}`);
-  return extractItem<CandidateRecord>(payload, `Error al obtener candidato ${id}`);
+  const payload = await handleResponse<unknown>(response, 'No se pudo obtener el detalle de la candidatura');
+  return extractItem<CandidateRecord>(payload, 'No se pudo obtener el detalle de la candidatura');
 }
 
 export async function createRecord(data: CandidateCreateInput): Promise<CandidateRecord> {
-  const response = await fetch(buildUrl('records'), {
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: JSON.stringify(data),
-  });
+  const response = await executeFetch(
+    buildUrl('records'),
+    {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(data),
+    },
+    'No se pudo registrar la candidatura',
+  );
 
-  const payload = await handleResponse<unknown>(response, 'Error al crear candidato');
-  return extractItem<CandidateRecord>(payload, 'Error al crear candidato');
+  const payload = await handleResponse<unknown>(response, 'No se pudo registrar la candidatura');
+  return extractItem<CandidateRecord>(payload, 'No se pudo registrar la candidatura');
 }
 
 export async function updateRecord(id: string, data: CandidateCreateInput): Promise<CandidateRecord> {
-  const response = await fetch(buildUrl(`records/${id}`), {
-    method: 'PUT',
-    headers: JSON_HEADERS,
-    body: JSON.stringify(data),
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${id}`),
+    {
+      method: 'PUT',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(data),
+    },
+    'No se pudo actualizar la candidatura',
+  );
 
-  const payload = await handleResponse<unknown>(response, `Error al actualizar candidato ${id}`);
-  return extractItem<CandidateRecord>(payload, `Error al actualizar candidato ${id}`);
+  const payload = await handleResponse<unknown>(response, 'No se pudo actualizar la candidatura');
+  return extractItem<CandidateRecord>(payload, 'No se pudo actualizar la candidatura');
 }
 
 export async function patchRecord(id: string, data: CandidatePatchInput): Promise<CandidateRecord> {
-  const response = await fetch(buildUrl(`records/${id}`), {
-    method: 'PATCH',
-    headers: JSON_HEADERS,
-    body: JSON.stringify(data),
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${id}`),
+    {
+      method: 'PATCH',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(data),
+    },
+    'No se pudo modificar el estado de la candidatura',
+  );
 
-  const payload = await handleResponse<unknown>(response, `Error al modificar candidato ${id}`);
-  return extractItem<CandidateRecord>(payload, `Error al modificar candidato ${id}`);
+  const payload = await handleResponse<unknown>(response, 'No se pudo modificar el estado de la candidatura');
+  return extractItem<CandidateRecord>(payload, 'No se pudo modificar el estado de la candidatura');
 }
 
 export async function deleteRecord(id: string): Promise<void> {
-  const response = await fetch(buildUrl(`records/${id}`), {
-    method: 'DELETE',
-    headers: JSON_HEADERS,
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${id}`),
+    {
+      method: 'DELETE',
+      headers: JSON_HEADERS,
+    },
+    'No se pudo eliminar la candidatura',
+  );
 
-  await handleResponse<void>(response, `Error al eliminar candidato ${id}`);
+  await handleResponse<void>(response, 'No se pudo eliminar la candidatura');
 }
 
 export async function getNotes(recordId: string): Promise<CandidateNote[]> {
-  const response = await fetch(buildUrl(`records/${recordId}/notes`), {
-    method: 'GET',
-    headers: JSON_HEADERS,
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${recordId}/notes`),
+    {
+      method: 'GET',
+      headers: JSON_HEADERS,
+    },
+    'No se pudieron cargar las notas',
+  );
 
-  const payload = await handleResponse<unknown>(response, `Error al obtener notas del candidato ${recordId}`);
-  return extractList<CandidateNote>(payload, `Error al obtener notas del candidato ${recordId}`);
+  const payload = await handleResponse<unknown>(response, 'No se pudieron cargar las notas');
+  return extractList<CandidateNote>(payload, 'No se pudieron cargar las notas');
 }
 
 export async function addNote(recordId: string, data: NoteCreateInput): Promise<CandidateNote> {
-  const response = await fetch(buildUrl(`records/${recordId}/notes`), {
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: JSON.stringify(data),
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${recordId}/notes`),
+    {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(data),
+    },
+    'No se pudo guardar la nota',
+  );
 
-  const payload = await handleResponse<unknown>(response, `Error al crear nota del candidato ${recordId}`);
-  return extractItem<CandidateNote>(payload, `Error al crear nota del candidato ${recordId}`);
+  const payload = await handleResponse<unknown>(response, 'No se pudo guardar la nota');
+  return extractItem<CandidateNote>(payload, 'No se pudo guardar la nota');
 }
 
 export async function deleteNote(recordId: string, noteId: string): Promise<void> {
-  const response = await fetch(buildUrl(`records/${recordId}/notes/${noteId}`), {
-    method: 'DELETE',
-    headers: JSON_HEADERS,
-  });
+  const response = await executeFetch(
+    buildUrl(`records/${recordId}/notes/${noteId}`),
+    {
+      method: 'DELETE',
+      headers: JSON_HEADERS,
+    },
+    'No se pudo eliminar la nota',
+  );
 
-  await handleResponse<void>(response, `Error al eliminar nota ${noteId} del candidato ${recordId}`);
+  await handleResponse<void>(response, 'No se pudo eliminar la nota');
 }
