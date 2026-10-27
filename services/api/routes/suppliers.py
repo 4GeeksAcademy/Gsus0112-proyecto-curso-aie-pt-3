@@ -22,7 +22,13 @@ def create_supplier(
 ) -> SupplierResponse:
     data = supplier.model_dump(mode="json")
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    supplier_id = suppliers.insert(data)
+    try:
+        supplier_id = suppliers.insert(data)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo registrar el proveedor en este momento.",
+        ) from exc
     return SupplierResponse(id=supplier_id, **data)
 
 
@@ -41,7 +47,13 @@ def list_suppliers(
         condition = (
             category_condition if condition is None else condition & category_condition
         )
-    records = suppliers.all() if condition is None else suppliers.search(condition)
+    try:
+        records = suppliers.all() if condition is None else suppliers.search(condition)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo obtener el directorio de proveedores.",
+        ) from exc
     return [SupplierResponse(id=record.doc_id, **record) for record in records]
 
 
@@ -49,7 +61,13 @@ def list_suppliers(
 def get_supplier(
     id: int, current_user: UserDB = Depends(get_current_user)
 ) -> SupplierResponse:
-    record = suppliers.get(doc_id=id)
+    try:
+        record = suppliers.get(doc_id=id)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo consultar el proveedor solicitado.",
+        ) from exc
     if record is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
     return SupplierResponse(id=record.doc_id, **record)
@@ -63,7 +81,14 @@ def update_supplier_rate(
 ) -> SupplierResponse:
     data = {"rate_per_shipment": update.rate_per_shipment}
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    if not suppliers.update(data, doc_ids=[id]):
+    try:
+        updated_ids = suppliers.update(data, doc_ids=[id])
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo actualizar la tarifa del proveedor.",
+        ) from exc
+    if not updated_ids:
         raise HTTPException(status_code=404, detail="Supplier not found")
     return get_supplier(id, current_user)
 
@@ -76,7 +101,14 @@ def update_supplier_status(
 ) -> SupplierResponse:
     data = update.model_dump(mode="json")
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    if not suppliers.update(data, doc_ids=[id]):
+    try:
+        updated_ids = suppliers.update(data, doc_ids=[id])
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo actualizar el estado del proveedor.",
+        ) from exc
+    if not updated_ids:
         raise HTTPException(status_code=404, detail="Supplier not found")
     return get_supplier(id, current_user)
 
@@ -85,6 +117,13 @@ def update_supplier_status(
 def delete_supplier(
     id: int, current_user: UserDB = Depends(get_current_user)
 ) -> Response:
-    if not suppliers.remove(doc_ids=[id]):
+    try:
+        removed_ids = suppliers.remove(doc_ids=[id])
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo eliminar el proveedor.",
+        ) from exc
+    if not removed_ids:
         raise HTTPException(status_code=404, detail="Supplier not found")
     return Response(status_code=204)

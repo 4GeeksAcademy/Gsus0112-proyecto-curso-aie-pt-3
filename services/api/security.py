@@ -9,11 +9,21 @@ from passlib.hash import bcrypt
 from .database import users
 from .models import UserDB
 
+def _parse_int_env(var_name: str, default: int) -> int:
+    raw_value = os.getenv(var_name)
+    if raw_value is None:
+        return default
+    try:
+        return int(raw_value)
+    except ValueError:
+        return default
+
+
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+ACCESS_TOKEN_EXPIRE_MINUTES = _parse_int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 # Clamped to the 15-60 minute window required for reset links.
-RESET_TOKEN_EXPIRE_MINUTES = min(max(int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "30")), 15), 60)
+RESET_TOKEN_EXPIRE_MINUTES = min(max(_parse_int_env("RESET_TOKEN_EXPIRE_MINUTES", 30), 15), 60)
 PASSWORD_RESET_TOKEN_TYPE = "password_reset"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -24,7 +34,10 @@ def get_password_hash(password: str) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.verify(plain_password, hashed_password)
+    except ValueError:
+        return False
 
 
 def create_access_token(data: dict) -> str:
@@ -71,7 +84,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserDB:
     except (JWTError, KeyError, TypeError, ValueError):
         raise credentials_exception
 
-    record = users.get(doc_id=user_id)
+    try:
+        record = users.get(doc_id=user_id)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo verificar la sesión en este momento.",
+        ) from exc
     if record is None:
         raise credentials_exception
     return UserDB(id=record.doc_id, **record)

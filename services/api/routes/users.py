@@ -17,7 +17,15 @@ def _ensure_owner_or_admin(current_user: UserDB, id: int) -> None:
 
 @router.post("", response_model=UserResponse, status_code=201)
 def create_user(user: UserCreate) -> UserResponse:
-    if users.contains(Query().email == user.email):
+    try:
+        exists = users.contains(Query().email == user.email)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo verificar el registro de usuario.",
+        ) from exc
+
+    if exists:
         raise HTTPException(status_code=409, detail="Email already registered")
 
     data = {
@@ -28,26 +36,44 @@ def create_user(user: UserCreate) -> UserResponse:
         "role": RoleEnum.user.value,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    user_id = users.insert(data)
-    profiles.insert(
-        {
-            "user_id": user_id,
-            "name": user.name or "",
-            "phone": user.phone or "",
-            "address": user.address or "",
-        }
-    )
+    profile_data = {
+        "name": user.name or "",
+        "phone": user.phone or "",
+        "address": user.address or "",
+    }
+    try:
+        user_id = users.insert(data)
+        profiles.insert({"user_id": user_id, **profile_data})
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo crear el usuario en este momento.",
+        ) from exc
+
     return UserResponse(id=user_id, **data)
 
 
 @router.get("", response_model=list[UserResponse])
 def list_users(_: UserDB = Depends(get_current_user)) -> list[UserResponse]:
-    return [UserResponse(id=record.doc_id, **record) for record in users.all()]
+    try:
+        records = users.all()
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo obtener la lista de usuarios.",
+        ) from exc
+    return [UserResponse(id=record.doc_id, **record) for record in records]
 
 
 @router.get("/{id}", response_model=UserResponse)
 def get_user(id: int, _: UserDB = Depends(get_current_user)) -> UserResponse:
-    record = users.get(doc_id=id)
+    try:
+        record = users.get(doc_id=id)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo consultar el usuario solicitado.",
+        ) from exc
     if record is None:
         raise HTTPException(status_code=404, detail="User not found")
     return UserResponse(id=record.doc_id, **record)
@@ -63,21 +89,53 @@ def update_user(
     if "role" in data and current_user.role != RoleEnum.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     if "email" in data:
-        existing = users.get(Query().email == data["email"])
+        try:
+            existing = users.get(Query().email == data["email"])
+        except OSError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudo validar el email del usuario.",
+            ) from exc
         if existing is not None and existing.doc_id != id:
             raise HTTPException(status_code=409, detail="Email already registered")
 
-    if users.get(doc_id=id) is None:
+    try:
+        current_record = users.get(doc_id=id)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo consultar el usuario a actualizar.",
+        ) from exc
+    if current_record is None:
         raise HTTPException(status_code=404, detail="User not found")
     if data:
-        users.update(data, doc_ids=[id])
+        try:
+            users.update(data, doc_ids=[id])
+        except OSError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudieron guardar los cambios del usuario.",
+            ) from exc
     return get_user(id, current_user)
 
 
 @router.delete("/{id}", status_code=204)
 def delete_user(id: int, current_user: UserDB = Depends(get_current_user)) -> Response:
     _ensure_owner_or_admin(current_user, id)
-    if not users.remove(doc_ids=[id]):
+    try:
+        removed = users.remove(doc_ids=[id])
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo eliminar el usuario.",
+        ) from exc
+    if not removed:
         raise HTTPException(status_code=404, detail="User not found")
-    profiles.remove(Query().user_id == id)
+    try:
+        profiles.remove(Query().user_id == id)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo eliminar el perfil asociado al usuario.",
+        ) from exc
     return Response(status_code=204)

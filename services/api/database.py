@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
-from tinydb import TinyDB
+try:
+    from tinydb import TinyDB
+except ImportError:
+    TinyDB = None  # type: ignore[assignment,misc]
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
@@ -26,15 +29,22 @@ from packages.shared.incident_rules import (  # noqa: E402
 )
 
 # --- TinyDB tables used by Suppliers, Users & Profiles ---
-db = TinyDB(
-    os.getenv(
-        "TRACKFLOW_DB_PATH", str(Path(__file__).resolve().parent / "db.json")
+if TinyDB is not None:
+    db = TinyDB(
+        os.getenv(
+            "TRACKFLOW_DB_PATH", str(Path(__file__).resolve().parent / "db.json")
+        )
     )
-)
-suppliers = db.table("suppliers")
-users = db.table("users")
-profiles = db.table("profiles")
-incidents_tinydb = db.table("incidents")
+    suppliers = db.table("suppliers")
+    users = db.table("users")
+    profiles = db.table("profiles")
+    incidents_tinydb = db.table("incidents")
+else:
+    db = None  # type: ignore[assignment]
+    suppliers = None  # type: ignore[assignment]
+    users = None  # type: ignore[assignment]
+    profiles = None  # type: ignore[assignment]
+    incidents_tinydb = None  # type: ignore[assignment]
 
 # --- SQLite persistence for the Centralized Incident Manager ---
 DEFAULT_DB_PATH = Path(__file__).resolve().parent / "incidents.db"

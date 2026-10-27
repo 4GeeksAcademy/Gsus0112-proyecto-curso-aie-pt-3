@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -69,6 +70,18 @@ def _validation_error_response(field: str, message: str) -> JSONResponse:
     )
 
 
+def _internal_db_error_response() -> JSONResponse:
+    message = "No se pudo completar la operación en la base de datos. Inténtalo de nuevo más tarde."
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": message,
+            "message": message,
+            "detail": message,
+        },
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def handle_request_validation_error(
     request: Request, exc: RequestValidationError
@@ -84,7 +97,15 @@ async def handle_request_validation_error(
                 field = str(loc[-1])
             message = f"Valor inválido en el campo '{field}': {first.get('msg', 'formato incorrecto')}."
         return _validation_error_response(field, message)
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    sanitized_errors = [
+        {
+            "loc": list(item.get("loc", ())),
+            "msg": str(item.get("msg", "Valor inválido")),
+            "type": str(item.get("type", "value_error")),
+        }
+        for item in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": sanitized_errors})
 
 
 @app.exception_handler(Exception)
@@ -100,8 +121,11 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
 
 
 @app.get("/api/incidents/summary")
-def read_incidents_summary() -> dict[str, Any]:
-    return get_incidents_summary()
+def read_incidents_summary() -> Any:
+    try:
+        return get_incidents_summary()
+    except (sqlite3.Error, OSError):
+        return _internal_db_error_response()
 
 
 @app.get("/api/incidents")
@@ -151,12 +175,15 @@ def read_incidents(
     else:
         cleaned_category = None
 
-    items = list_incidents(
-        status=cleaned_status,
-        origin=cleaned_origin,
-        branch=cleaned_branch,
-        category=cleaned_category,
-    )
+    try:
+        items = list_incidents(
+            status=cleaned_status,
+            origin=cleaned_origin,
+            branch=cleaned_branch,
+            category=cleaned_category,
+        )
+    except (sqlite3.Error, OSError):
+        return _internal_db_error_response()
     return [item.to_dict() for item in items]
 
 
@@ -181,13 +208,19 @@ async def create_new_incident(request: Request) -> Any:
             error_msg or "Datos de incidencia inválidos.",
         )
 
-    created = create_incident(normalized)
+    try:
+        created = create_incident(normalized)
+    except (sqlite3.Error, OSError):
+        return _internal_db_error_response()
     return created.to_dict()
 
 
 @app.get("/api/incidents/{incident_id}")
 def read_incident_detail(incident_id: int) -> Any:
-    incident = get_incident_by_id(incident_id)
+    try:
+        incident = get_incident_by_id(incident_id)
+    except (sqlite3.Error, OSError):
+        return _internal_db_error_response()
     if incident is None:
         return JSONResponse(
             status_code=404,
@@ -214,7 +247,10 @@ async def patch_incident_status(incident_id: int, request: Request) -> Any:
             "status", "El cuerpo de la petición debe ser un objeto JSON con el campo 'status'."
         )
 
-    incident = get_incident_by_id(incident_id)
+    try:
+        incident = get_incident_by_id(incident_id)
+    except (sqlite3.Error, OSError):
+        return _internal_db_error_response()
     if incident is None:
         return JSONResponse(
             status_code=404,
@@ -233,7 +269,10 @@ async def patch_incident_status(incident_id: int, request: Request) -> Any:
             "status", error_msg or "Transición de estado no permitida."
         )
 
-    updated = update_incident_status(incident_id, new_status)
+    try:
+        updated = update_incident_status(incident_id, new_status)
+    except (sqlite3.Error, OSError):
+        return _internal_db_error_response()
     if updated is None:
         return JSONResponse(
             status_code=404,
@@ -251,13 +290,27 @@ async def analyze_incidents(file: UploadFile = File(...)) -> dict[str, Any]:
     global last_analysis
 
     if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must have a .csv extension")
+        raise HTTPException(status_code=400, detail="El archivo debe tener extensión .csv.")
 
     try:
-        content = (await file.read()).decode("utf-8-sig")
+        raw_bytes = await file.read()
+        content = raw_bytes.decode("utf-8-sig")
+    except (OSError, UnicodeDecodeError) as error:
+        raise HTTPException(
+            status_code=400,
+            detail="No se pudo leer el archivo CSV. Verifica que tenga codificación UTF-8.",
+        ) from error
+
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="El archivo CSV está vacío.")
+
+    try:
         results = process_csv_data(io.StringIO(content, newline=""))
-    except (UnicodeDecodeError, csv.Error) as error:
-        raise HTTPException(status_code=400, detail="Invalid CSV file") from error
+    except csv.Error as error:
+        raise HTTPException(
+            status_code=400,
+            detail="El formato del archivo CSV no es válido.",
+        ) from error
 
     last_analysis = results
     return results
