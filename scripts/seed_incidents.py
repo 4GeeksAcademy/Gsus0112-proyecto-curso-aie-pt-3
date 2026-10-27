@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import sqlite3
 import sys
 from collections import Counter
 from pathlib import Path
@@ -23,12 +24,26 @@ from services.api.database import (  # noqa: E402
 DEFAULT_CSV_PATH = Path(__file__).resolve().parent / "incidents-trackflow.csv"
 
 
+REQUIRED_CSV_COLUMNS = {
+    "country",
+    "carrier",
+    "tracking_number",
+    "category",
+    "status",
+    "description",
+    "customer_email",
+}
+
+
 def seed_from_csv(
     csv_path: Path = DEFAULT_CSV_PATH,
     *,
     db_path: Optional[Path | str] = None,
 ) -> dict[str, Any]:
     """Lee el CSV histórico, valida y transforma cada fila, e inserta de forma idempotente."""
+    if not csv_path.exists() or not csv_path.is_file():
+        raise FileNotFoundError(f"El archivo CSV '{csv_path.name}' no existe.")
+
     init_db(db_path)
 
     total_rows = 0
@@ -39,6 +54,13 @@ def seed_from_csv(
 
     with csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
+        if not reader.fieldnames:
+            raise ValueError("El archivo CSV está vacío o no contiene cabeceras.")
+        missing_cols = REQUIRED_CSV_COLUMNS - set(reader.fieldnames)
+        if missing_cols:
+            missing_list = ", ".join(sorted(missing_cols))
+            raise ValueError(f"Faltan columnas obligatorias en el CSV: {missing_list}.")
+
         for line_number, row in enumerate(reader, start=2):
             total_rows += 1
             is_valid, reason, transformed = transform_csv_row_to_incident(row)
@@ -86,14 +108,17 @@ def seed_from_csv(
 
 def main() -> int:
     csv_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_CSV_PATH
-    if not csv_path.exists():
-        print(f"Error: no se encontró el archivo CSV en {csv_path}", file=sys.stderr)
+    if not csv_path.exists() or not csv_path.is_file():
+        print(f"Error: no se encontró el archivo CSV '{csv_path.name}'.", file=sys.stderr)
         return 1
 
     try:
         report = seed_from_csv(csv_path)
-    except (OSError, UnicodeError, csv.Error) as error:
-        print(f"Error al procesar el archivo CSV: {error}", file=sys.stderr)
+    except (OSError, UnicodeError, csv.Error, ValueError) as error:
+        print(f"Error al leer o validar el archivo CSV: {error}", file=sys.stderr)
+        return 1
+    except sqlite3.Error as error:
+        print(f"Error en la base de datos durante el seed: {error}", file=sys.stderr)
         return 1
 
     print("=== Seed de incidencias históricas (TrackFlow) ===")

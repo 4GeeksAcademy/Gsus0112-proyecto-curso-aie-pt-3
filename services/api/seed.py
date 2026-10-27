@@ -1,4 +1,7 @@
 from datetime import datetime, timezone
+import sys
+
+from pydantic import ValidationError
 
 if __package__:
     from .database import suppliers
@@ -36,36 +39,83 @@ SUPPLIERS_SEED = [
 ]
 
 
-def main() -> None:
-    if len(suppliers) > 0:
-        for record in suppliers.all():
+def main() -> int:
+    if not SUPPLIERS_SEED:
+        print("Error: la lista SUPPLIERS_SEED está vacía.", file=sys.stderr)
+        return 1
+
+    try:
+        existing_count = len(suppliers)
+    except OSError as error:
+        print(f"Error al acceder a la base de datos de proveedores: {error}", file=sys.stderr)
+        return 1
+
+    if existing_count > 0:
+        try:
+            existing_records = suppliers.all()
+        except OSError as error:
+            print(f"Error al leer los proveedores existentes: {error}", file=sys.stderr)
+            return 1
+
+        for record in existing_records:
             if "rate" not in record:
                 continue
             data = dict(record)
+            country = str(data.get("country") or "US").upper()
+            data["country"] = country
             data.setdefault("rate_per_shipment", data.pop("rate"))
-            data.setdefault("currency", "EUR" if data["country"] == "ES" else "USD")
-            data.setdefault("service_zone", data["country"])
+            data.setdefault("currency", "EUR" if country == "ES" else "USD")
+            data.setdefault("service_zone", country)
             data.setdefault("contact_email", "supplier@example.com")
             data.setdefault("notes", "Migrated demo supplier; verify contact and service zone.")
-            SupplierCreate(**data)
+
+            try:
+                SupplierCreate(**data)
+            except ValidationError as error:
+                print(
+                    f"Error de validación al migrar proveedor id={record.doc_id}: {error}",
+                    file=sys.stderr,
+                )
+                return 1
+
             def replace_record(document: dict, replacement: dict = data) -> None:
                 document.clear()
                 document.update(replacement)
-            suppliers.update(replace_record, doc_ids=[record.doc_id])
+
+            try:
+                suppliers.update(replace_record, doc_ids=[record.doc_id])
+            except OSError as error:
+                print(
+                    f"Error al guardar el proveedor migrado id={record.doc_id}: {error}",
+                    file=sys.stderr,
+                )
+                return 1
+
         print("La base de datos ya está inicializada; esquema actualizado")
-        return
+        return 0
 
     updated_at = datetime.now(timezone.utc).isoformat()
-    records = [
-        {
-            **SupplierCreate(**supplier).model_dump(mode="json"),
-            "updated_at": updated_at,
-        }
-        for supplier in SUPPLIERS_SEED
-    ]
-    inserted_ids = suppliers.insert_multiple(records)
+    records: list[dict] = []
+    for index, supplier in enumerate(SUPPLIERS_SEED, start=1):
+        try:
+            validated = SupplierCreate(**supplier).model_dump(mode="json")
+        except ValidationError as error:
+            print(
+                f"Error de validación en el registro semilla #{index}: {error}",
+                file=sys.stderr,
+            )
+            return 1
+        records.append({**validated, "updated_at": updated_at})
+
+    try:
+        inserted_ids = suppliers.insert_multiple(records)
+    except OSError as error:
+        print(f"Error al insertar los proveedores semilla: {error}", file=sys.stderr)
+        return 1
+
     print(f"Seeder ejecutado con éxito. Se insertaron {len(inserted_ids)} registros.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
