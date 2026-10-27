@@ -2,6 +2,7 @@
 
 ## Estado actual
 
+- **Auditoría y Estandarización de Gestión de Errores (`feature/error-handling-audit`):** completado. Auditoría transversal en las 3 capas (Frontend, Backend y Scripts): eliminada filtración de `RESEND_API_KEY` en `services/api/mailer.py`, sanitizados errores de validación y añadidas capturas `try/except` de ámbito reducido en rutas de FastAPI (`auth.py`, `users.py`, `profiles.py`, `suppliers.py`, `main.py`, `security.py`), añadidos códigos de salida `sys.exit(1)` y validaciones defensivas en `scripts/analyze.py`, `scripts/seed_incidents.py`, `services/api/seed.py` y `skills/data-analysis/scripts/pandas_clean.py`, y estandarizado el patrón de 3 estados (cargando, éxito, error legible sin códigos HTTP crudos + llamada a la acción clara) en `uis/backoffice/` y `uis/talent-pipeline-tracker/`.
 - **Gestor de Incidencias Centralizado:** completado. Incluye modelo `Incident` con restricciones de integridad en `services/api/database.py`, lógica de validación y transformación compartida en `packages/shared/`, script idempotente `scripts/seed_incidents.py`, endpoints REST (`POST /api/incidents`, `GET /api/incidents`, `GET /api/incidents/{id}`, `PATCH /api/incidents/{id}/status`, `GET /api/incidents/summary`) y vistas de registro, listado y resumen en `uis/backoffice/`.
 - **Modelos de dominio:** completado. Incluye interfaces TypeScript y funciones de filtrado, ordenamiento, búsqueda, validación y agregación en `src/`.
 - **Infraestructura de agentes:** completada. Incluye banco de memoria, instrucciones globales, reglas y un skill de revisión de código.
@@ -47,6 +48,7 @@
 
 ## Historial de cambios
 
+- **2026-10-26:** completada la auditoría transversal de gestión de errores (`feature/error-handling-audit`) en frontend (`uis/backoffice/`, `uis/talent-pipeline-tracker/`), backend (`services/api/`) y scripts (`scripts/`, `services/api/seed.py`, `skills/data-analysis/scripts/pandas_clean.py`).
 - **2026-10-23:** integrado el Gestor de Incidencias Centralizado de TrackFlow: lógica compartida en `packages/shared/`, script de seed idempotente `scripts/seed_incidents.py`, endpoints CRUD/ciclo de vida/resumen en `services/api/` y vistas de registro, listado con filtros y panel de resumen en `uis/backoffice/`.
 - **2026-10-22:** AUTH-03: recuperación y cambio de contraseña en la API. Nuevo `mailer.py` con `resend` (`RESEND_API_KEY`), tokens de recuperación con `type=password_reset` y caducidad de 15-60 min rechazados como sesión, campo `password_changed_at` en `users` y cinco pruebas en `test_auth_password.py`.
 - **2026-10-22:** corregido el contrato de proveedores y el PATCH de tarifa; añadidos `SUPPLIERS_SEED`, comando `uv run seed` y migración idempotente de registros antiguos. Directorio integrado en Next.js con `AuthGuard`, `fetchWithAuth` para GET/POST/PATCH/DELETE y enlace en el sidebar. Añadidas siete pruebas de regresión con base de datos en memoria.
