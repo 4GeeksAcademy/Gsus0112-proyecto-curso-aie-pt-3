@@ -12,7 +12,7 @@ export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
 
-function buildAuthHeaders(extra?: Record<string, string>): HeadersInit {
+export function buildAuthHeaders(extra?: Record<string, string>): HeadersInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...extra,
@@ -40,7 +40,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function extractFriendlyError(payload: unknown, status: number): { message: string; field: string | null } {
+export function extractFriendlyError(payload: unknown, status: number): { message: string; field: string | null } {
   if (isRecord(payload)) {
     const rawField = typeof payload.field === 'string' ? payload.field : null;
     const rawMsg =

@@ -53,7 +53,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
             detail="No se pudo procesar el inicio de sesión en este momento.",
         ) from exc
 
-    if user is None or not verify_password(form_data.password, user.get("hashed_password", "")):
+    if (
+        user is None
+        or not user.get("is_active", True)
+        or not verify_password(form_data.password, user.get("hashed_password", ""))
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
@@ -124,7 +128,7 @@ def reset_password(body: ResetPasswordRequest) -> dict[str, str]:
             changed_ts = datetime.fromisoformat(str(changed_at)).timestamp()
         except (ValueError, TypeError):
             raise invalid_token
-        if issued_at < changed_ts:
+        if issued_at <= changed_ts:
             raise invalid_token
 
     _set_password(user_id, body.new_password)

@@ -7,19 +7,14 @@ import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 
 import { useAuth } from '@/src/contexts/AuthContext';
 import { API_BASE_URL } from '@/src/utils/api';
-
-type FieldName = 'email' | 'password' | 'name' | 'phone' | 'address';
-
-type FormValues = Record<FieldName, string>;
-
-type FieldErrors = Partial<Record<FieldName, string>>;
-
-type ValidationIssue = {
-  loc: (string | number)[];
-  msg: string;
-};
-
-const PASSWORD_MAX_LENGTH = 72;
+import {
+  EMPTY_FORM,
+  PASSWORD_MAX_LENGTH,
+  buildRegistrationPayload,
+  parseApiError,
+  validateRegistrationForm,
+} from '@/src/utils/authValidators';
+import type { FieldErrors, FieldName, FormValues } from '@/src/utils/authValidators';
 
 const FIELDS: { name: FieldName; label: string; type: string; autoComplete: string; required: boolean }[] = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email', required: true },
@@ -28,45 +23,6 @@ const FIELDS: { name: FieldName; label: string; type: string; autoComplete: stri
   { name: 'phone', label: 'Teléfono', type: 'tel', autoComplete: 'tel', required: false },
   { name: 'address', label: 'Dirección', type: 'text', autoComplete: 'street-address', required: false },
 ];
-
-const EMPTY_FORM: FormValues = { email: '', password: '', name: '', phone: '', address: '' };
-
-function isFieldName(value: unknown): value is FieldName {
-  return typeof value === 'string' && value in EMPTY_FORM;
-}
-
-/** Convierte la respuesta de error de FastAPI en errores por campo y un mensaje general. */
-async function parseApiError(response: Response): Promise<{ fieldErrors: FieldErrors; message: string }> {
-  const body: unknown = await response.json().catch(() => null);
-  const detail = body !== null && typeof body === 'object' && 'detail' in body ? body.detail : null;
-
-  if (response.status === 409) {
-    return { fieldErrors: { email: 'Este email ya está registrado.' }, message: '' };
-  }
-
-  if (response.status === 422 && Array.isArray(detail)) {
-    const fieldErrors: FieldErrors = {};
-    const general: string[] = [];
-    for (const issue of detail as ValidationIssue[]) {
-      const loc = issue?.loc ?? [];
-      const field = loc[loc.length - 1];
-      if (isFieldName(field)) {
-        fieldErrors[field] ??= issue?.msg ?? 'Valor no válido.';
-      } else if (issue?.msg) {
-        general.push(issue.msg);
-      }
-    }
-    return { fieldErrors, message: general.join(' ') || 'Revisa los campos marcados e inténtalo de nuevo.' };
-  }
-
-  return {
-    fieldErrors: {},
-    message:
-      typeof detail === 'string' && response.status < 500
-        ? detail
-        : 'No pudimos completar el registro en este momento. Por favor, inténtalo de nuevo en unos segundos.',
-  };
-}
 
 const inputBaseClassName =
   'mt-1 block w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2';
@@ -90,22 +46,11 @@ export default function RegisterPage(): ReactElement {
     event.preventDefault();
     setError('');
 
-    const localErrors: FieldErrors = {};
-    if (!values.email.trim()) localErrors.email = 'El email es obligatorio.';
-    if (!values.password) localErrors.password = 'La contraseña es obligatoria.';
-    if (values.password.length > PASSWORD_MAX_LENGTH) {
-      localErrors.password = `La contraseña no puede superar ${PASSWORD_MAX_LENGTH} caracteres.`;
-    }
+    const localErrors = validateRegistrationForm(values);
     setFieldErrors(localErrors);
     if (Object.keys(localErrors).length > 0) return;
 
-    const payload = {
-      email: values.email.trim(),
-      password: values.password,
-      name: values.name.trim() || null,
-      phone: values.phone.trim() || null,
-      address: values.address.trim() || null,
-    };
+    const payload = buildRegistrationPayload(values);
 
     setIsSubmitting(true);
     try {

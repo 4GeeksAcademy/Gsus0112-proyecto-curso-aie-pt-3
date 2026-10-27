@@ -9,6 +9,7 @@ from passlib.hash import bcrypt
 from .database import users
 from .models import UserDB
 
+
 def _parse_int_env(var_name: str, default: int) -> int:
     raw_value = os.getenv(var_name)
     if raw_value is None:
@@ -53,18 +54,20 @@ def create_password_reset_token(user_id: int) -> str:
         "sub": str(user_id),
         "type": PASSWORD_RESET_TOKEN_TYPE,
         "iat": now,
+        "iat_ts": now.timestamp(),
         "exp": now + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_password_reset_token(token: str) -> tuple[int, int] | None:
+def decode_password_reset_token(token: str) -> tuple[int, float] | None:
     """Returns (user_id, iat) for a valid, unexpired reset token, or None."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != PASSWORD_RESET_TOKEN_TYPE:
             return None
-        return int(payload["sub"]), int(payload["iat"])
+        raw_iat = payload.get("iat_ts", payload["iat"])
+        return int(payload["sub"]), float(raw_iat)
     except (JWTError, KeyError, TypeError, ValueError):
         return None
 
@@ -91,6 +94,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserDB:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo verificar la sesión en este momento.",
         ) from exc
-    if record is None:
+    if record is None or not record.get("is_active", True):
         raise credentials_exception
     return UserDB(id=record.doc_id, **record)
