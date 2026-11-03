@@ -61,14 +61,16 @@ else:
 
 # --- Conexión 2: Motor SQLModel apuntando a Supabase (PostgreSQL) para Inventario ---
 def _normalize_database_url(raw_url: str | None) -> str | None:
-    """Normaliza la URI PostgreSQL de DATABASE_URL sin codificar credenciales en el código."""
+    """Normaliza la URI PostgreSQL de DATABASE_URL al driver psycopg2 sin codificar credenciales."""
     if not raw_url:
         return None
     cleaned = raw_url.strip()
     if not cleaned:
         return None
     if cleaned.startswith("postgres://"):
-        return "postgresql://" + cleaned[len("postgres://") :]
+        return "postgresql+psycopg2://" + cleaned[len("postgres://") :]
+    if cleaned.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + cleaned[len("postgresql://") :]
     return cleaned
 
 

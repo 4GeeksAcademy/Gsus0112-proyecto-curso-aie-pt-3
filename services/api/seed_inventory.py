@@ -1,20 +1,20 @@
 """Seeder idempotente para las tablas ORM de inventario (`SKU`, `StockEntry`, `StockExit`) en Supabase."""
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import sys
 from typing import Any
 
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
-if __package__:
-    from .database import create_inventory_tables, get_engine, users
-    from .models import SKU, StockEntry, StockExit
-    from .schemas import SKUCreate, StockEntryCreate, StockExitCreate
-else:
-    from database import create_inventory_tables, get_engine, users  # type: ignore[no-redef]
-    from models import SKU, StockEntry, StockExit  # type: ignore[no-redef]
-    from schemas import SKUCreate, StockEntryCreate, StockExitCreate  # type: ignore[no-redef]
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from services.api.database import create_inventory_tables, get_engine, users  # noqa: E402
+from services.api.models import SKU, StockEntry, StockExit  # noqa: E402
+from services.api.schemas import SKUCreate, StockEntryCreate, StockExitCreate  # noqa: E402
 
 
 SKUS_SEED: list[dict[str, str]] = [

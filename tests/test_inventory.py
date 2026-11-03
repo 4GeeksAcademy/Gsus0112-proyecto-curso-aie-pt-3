@@ -166,6 +166,14 @@ def test_orm_metadata_has_no_user_table_no_current_stock_column_and_enforces_fk(
 
 def test_no_direct_sqlalchemy_imports_in_inventory_modules() -> None:
     """Comprueba mediante AST que los módulos del servicio usen SQLModel sin importar sqlalchemy directamente."""
+    assert (
+        db_module._normalize_database_url("postgres://u:p@host:6543/postgres")
+        == "postgresql+psycopg2://u:p@host:6543/postgres"
+    )
+    assert (
+        db_module._normalize_database_url("postgresql://u:p@host:6543/postgres")
+        == "postgresql+psycopg2://u:p@host:6543/postgres"
+    )
     repo_root = Path(__file__).resolve().parent.parent
     files_to_check = [
         repo_root / "services" / "api" / "database.py",
