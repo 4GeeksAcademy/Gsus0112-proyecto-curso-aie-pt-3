@@ -2,6 +2,7 @@
 
 ## Estado actual
 
+- **Interfaz de Gestión de Inventario en el Backoffice (`feature/backoffice-inventory-ui`):** completado. Capa de integración dedicada en `uis/backoffice/src/lib/inventory.ts` (y `uis/backoffice/lib/inventory.ts`) sin llamadas `fetch` directas en los componentes, adjuntando `Authorization: Bearer <token>` y extrayendo mensajes legibles en errores `4xx`/`5xx`; shell de navegación autenticado en `uis/backoffice/src/components/InventoryShell.tsx` con `AuthGuard`, `Sidebar`, indicadores visuales de stock documentados (`CRITICAL_STOCK_THRESHOLD = 10`, `LOW_STOCK_THRESHOLD = 50`) y cuatro vistas protegidas en `/backoffice/inventory/products`, `/backoffice/inventory/orders/inbound`, `/backoffice/inventory/orders/outbound` y `/backoffice/inventory/orders` (también accesibles en `/inventory/*`), más suite de pruebas unitarias Jest en `uis/backoffice/__tests__/inventory.test.ts`.
 - **Gestión de Inventario Backend con SQLModel ORM y Doble Base de Datos (`feature/inventory-orm`):** completado y sembrado en Supabase PostgreSQL. Arquitectura dual en `services/api/database.py` (TinyDB para autenticación/usuarios/proveedores + motor `SQLModel` hacia Supabase PostgreSQL vía `.env` con normalización `postgresql+psycopg2://` y sesiones por petición `Depends(get_db)`), modelos ORM `SKU`, `StockEntry` y `StockExit` en `services/api/models.py` (sin tabla `User` en Supabase ni columna `current_stock` almacenada), schemas Pydantic separados en `services/api/schemas.py`, router `/inventory` en `services/api/routers/inventory.py` con prevención de N+1 (`GROUP BY` y `JOIN`), cálculo de stock aislado por almacén (`LA` / `ZGZ`), validación estricta de `tracking_number` (`dispatch` vs `loss`), rechazo previo con `HTTP 400` ante stock insuficiente, seeder idempotente `services/api/seed_inventory.py` ejecutado contra Supabase con los 6 SKUs oficiales de TrackFlow, 7 entradas y 4 salidas, y suite de pruebas en `tests/test_inventory.py`.
 - **Auditoría y Estandarización de Gestión de Errores (`feature/error-handling-audit`):** completado. Auditoría transversal en las 3 capas (Frontend, Backend y Scripts): eliminada filtración de `RESEND_API_KEY` en `services/api/mailer.py`, sanitizados errores de validación y añadidas capturas `try/except` de ámbito reducido en rutas de FastAPI (`auth.py`, `users.py`, `profiles.py`, `suppliers.py`, `main.py`, `security.py`), añadidos códigos de salida `sys.exit(1)` y validaciones defensivas en `scripts/analyze.py`, `scripts/seed_incidents.py`, `services/api/seed.py` y `skills/data-analysis/scripts/pandas_clean.py`, y estandarizado el patrón de 3 estados (cargando, éxito, error legible sin códigos HTTP crudos + llamada a la acción clara) en `uis/backoffice/` y `uis/talent-pipeline-tracker/`.
 - **Gestor de Incidencias Centralizado:** completado. Incluye modelo `Incident` con restricciones de integridad en `services/api/database.py`, lógica de validación y transformación compartida en `packages/shared/`, script idempotente `scripts/seed_incidents.py`, endpoints REST (`POST /api/incidents`, `GET /api/incidents`, `GET /api/incidents/{id}`, `PATCH /api/incidents/{id}/status`, `GET /api/incidents/summary`) y vistas de registro, listado y resumen en `uis/backoffice/`.
@@ -33,14 +34,13 @@
 - [x] `src/components/AuthGuard.tsx` protegiendo `/` y `/account/profile`.
 - [x] Vista `/account/profile` para editar nombre, teléfono y dirección vía `PUT /profiles/me`.
 - [x] AUTH-03: vistas `/forgot-password`, `/reset-password` y `/account/change-password` (con `AuthGuard` y `fetchWithAuth`), y enlace "¿Olvidaste tu contraseña?" en `/login`.
+- [x] Inventario (`/backoffice/inventory/*` y `/inventory/*`): módulo `src/lib/inventory.ts` con cabecera Bearer, vista de SKUs con semáforo de stock, formulario de recepción (`StockEntry`), formulario de salida (`StockExit`) con stock reactivo previo, advertencia preventiva de UX y error `HTTP 400` inline junto a `quantity`, e historial de órdenes de solo lectura con `user_uuid`.
 
 ## Próximos pasos
 
-1. Configurar `DATABASE_URL` (Supabase Transaction Pooler, puerto `6543`) en `.env` local y ejecutar `seed-inventory` para poblar Supabase antes de la demo.
-2. Conectar el website público con contenido administrable.
-3. Evolucionar el gestor de incidencias con búsqueda semántica mediante embeddings.
-4. Implementar vistas de inventario en el backoffice consumiendo `/inventory/products` y `/inventory/orders`.
-5. Crear un seeder para el primer usuario `admin`.
+1. Conectar el website público con contenido administrable.
+2. Evolucionar el gestor de incidencias con búsqueda semántica mediante embeddings.
+3. Crear un seeder para el primer usuario `admin`.
 
 ## Decisiones pendientes
 
@@ -49,6 +49,7 @@
 
 ## Historial de cambios
 
+- **2026-11-03:** implementada la Interfaz de Gestión de Inventario en el Backoffice (`feature/backoffice-inventory-ui`): módulo de integración `uis/backoffice/src/lib/inventory.ts` (y `lib/inventory.ts`), shell autenticado `InventoryShell.tsx`, páginas de catálogo de SKUs (`/backoffice/inventory/products`), recepción de mercancía (`/backoffice/inventory/orders/inbound`), despacho/baja con stock reactivo y error `400` inline (`/backoffice/inventory/orders/outbound`), historial de movimientos de solo lectura (`/backoffice/inventory/orders`), variables de entorno en `.env.example` / `.gitignore` y 9 pruebas unitarias en `uis/backoffice/__tests__/inventory.test.ts`.
 - **2026-11-02:** implementado el módulo de Gestión de Inventario Backend (`feature/inventory-orm`) con arquitectura de doble base de datos (TinyDB + Supabase PostgreSQL con `SQLModel`), modelos ORM (`SKU`, `StockEntry`, `StockExit`), schemas Pydantic desacoplados (`services/api/schemas.py`), router `/inventory` sin consultas N+1, stock calculado por almacén (`LA`/`ZGZ`), seeder idempotente (`services/api/seed_inventory.py`) y 9 pruebas automatizadas en `tests/test_inventory.py`.
 - **2026-10-26:** completada la auditoría transversal de gestión de errores (`feature/error-handling-audit`) en frontend (`uis/backoffice/`, `uis/talent-pipeline-tracker/`), backend (`services/api/`) y scripts (`scripts/`, `services/api/seed.py`, `skills/data-analysis/scripts/pandas_clean.py`).
 - **2026-10-23:** integrado el Gestor de Incidencias Centralizado de TrackFlow: lógica compartida en `packages/shared/`, script de seed idempotente `scripts/seed_incidents.py`, endpoints CRUD/ciclo de vida/resumen en `services/api/` y vistas de registro, listado con filtros y panel de resumen en `uis/backoffice/`.

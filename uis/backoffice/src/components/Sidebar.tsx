@@ -6,15 +6,18 @@ import type { ReactElement } from 'react';
 
 const navigation = [
   { label: 'Resumen', icon: '📊', href: '#resumen' },
+  { label: 'Inventario de SKUs', icon: '📦', href: '/backoffice/inventory/products' },
+  { label: 'Orden de Entrada', icon: '📥', href: '/backoffice/inventory/orders/inbound' },
+  { label: 'Orden de Salida', icon: '📤', href: '/backoffice/inventory/orders/outbound' },
+  { label: 'Historial de Órdenes', icon: '📋', href: '/backoffice/inventory/orders' },
   { label: 'Gestor de Incidencias', icon: '🚨', href: '/incidents' },
   { label: 'Registrar Incidencia', icon: '➕', href: '/incidents/new' },
   { label: 'Resumen Incidencias', icon: '📈', href: '/incidents/summary' },
   { label: 'Almacenes', icon: '🏭', href: '#almacenes' },
-  { label: 'Envíos', icon: '📦', href: '#envios' },
+  { label: 'Envíos', icon: '🚚', href: '#envios' },
   { label: 'Devoluciones', icon: '🔄', href: '#devoluciones' },
-  { label: 'Incidencias', icon: '📁', href: '#incidencias' },
   { label: 'Clientes', icon: '👥', href: '#clientes' },
-  { label: 'Directorio de Proveedores', icon: '🚚', href: '/suppliers' },
+  { label: 'Directorio de Proveedores', icon: '🏢', href: '/suppliers' },
 ];
 
 /** Renderiza la navegación propia del centro de control interno. */
@@ -22,10 +25,15 @@ export function Sidebar(): ReactElement {
   const [activeSection, setActiveSection] = useState<string>('#resumen');
   const pathname = usePathname();
 
-  const isActive = (href: string): boolean =>
-    href.startsWith('/')
+  const isActive = (href: string): boolean => {
+    if (href.startsWith('/backoffice/inventory/')) {
+      const shortHref = href.replace('/backoffice', '');
+      return pathname === href || pathname === shortHref;
+    }
+    return href.startsWith('/')
       ? pathname === href
       : pathname === '/' && activeSection === href;
+  };
 
   return (
     <aside className="flex w-full flex-col bg-slate-900 text-white md:fixed md:inset-y-0 md:left-0 md:w-64">

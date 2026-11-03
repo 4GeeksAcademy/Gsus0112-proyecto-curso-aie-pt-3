@@ -3,7 +3,7 @@ const LOGIN_PATH = '/login';
 
 /** Resuelve la URL de la API: variable de entorno, puerto 8000 del Codespace o localhost. */
 export function resolveApiBaseUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_API_URL;
+  const configured = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_INVENTORY_API_URL;
   if (configured) {
     return configured.replace(/\/$/, '');
   }
