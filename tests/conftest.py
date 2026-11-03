@@ -54,9 +54,11 @@ def memory_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[
     monkeypatch.setattr(profiles_routes, "profiles", profiles_table)
     monkeypatch.setattr(suppliers_routes, "suppliers", suppliers_table)
 
-    # Aislar la base de datos SQLite de incidencias en un archivo temporal
+    # Aislar la base de datos SQLite de incidencias y evitar acceso accidental al motor cloud de Supabase
     sqlite_path = tmp_path / "test_incidents.db"
     monkeypatch.setenv("INCIDENTS_DB_PATH", str(sqlite_path))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(db_module, "engine", None)
     monkeypatch.setattr(main_module, "last_analysis", None)
     db_module.init_db(sqlite_path)
 

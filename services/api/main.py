@@ -1,13 +1,14 @@
-"""API de gestión y análisis centralizado de incidencias, proveedores y autenticación de TrackFlow."""
+"""API de gestión y análisis centralizado de incidencias, proveedores, inventario y autenticación de TrackFlow."""
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import csv
 import io
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, AsyncIterator, Optional
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -29,23 +30,35 @@ from packages.shared.incident_rules import (  # noqa: E402
 )
 from services.api.database import (  # noqa: E402
     create_incident,
+    create_inventory_tables,
     get_incident_by_id,
     get_incidents_summary,
     init_db,
     list_incidents,
     update_incident_status,
 )
+from .routers.inventory import router as inventory_router  # noqa: E402
 from .routes.auth import router as auth_router  # noqa: E402
 from .routes.profiles import router as profiles_router  # noqa: E402
 from .routes.suppliers import router as suppliers_router  # noqa: E402
 from .routes.users import router as users_router  # noqa: E402
 
-app = FastAPI(title="TrackFlow API")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Inicializa la tabla local de incidencias y el esquema ORM SQLModel en Supabase al arrancar."""
+    init_db()
+    create_inventory_tables()
+    yield
+
+
+app = FastAPI(title="TrackFlow API", lifespan=lifespan)
 app.include_router(suppliers_router, prefix="/api")
 # Mounted without /api so the path matches OAuth2PasswordBearer(tokenUrl="/auth/login").
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(profiles_router)
+app.include_router(inventory_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
