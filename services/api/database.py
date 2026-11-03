@@ -1,4 +1,8 @@
-"""Acceso a las bases de datos de TrackFlow (TinyDB para proveedores/usuarios y SQLite/TinyDB para incidencias)."""
+"""Acceso a las bases de datos de TrackFlow:
+- TinyDB para autenticación, usuarios, perfiles y proveedores locales.
+- Motor SQLModel (PostgreSQL / Supabase) para inventario centralizado (SKU, StockEntry, StockExit).
+- SQLite para el histórico del gestor centralizado de incidencias.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
+from dotenv import load_dotenv
+from fastapi import HTTPException, status
+from sqlmodel import Session, SQLModel, create_engine
+
 try:
     from tinydb import TinyDB
 except ImportError:
@@ -20,6 +28,10 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+# Cargar variables de entorno desde .env (raíz del monorepo o services/api/.env) sin sobrescribir entorno activo
+load_dotenv(_REPO_ROOT / ".env", override=False)
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+
 from packages.shared.incident_rules import (  # noqa: E402
     VALID_BRANCHES,
     VALID_MODEL_CATEGORIES,
@@ -28,7 +40,7 @@ from packages.shared.incident_rules import (  # noqa: E402
     build_empty_summary,
 )
 
-# --- TinyDB tables used by Suppliers, Users & Profiles ---
+# --- Conexión 1: TinyDB para Suppliers, Users & Profiles (Autenticación local) ---
 if TinyDB is not None:
     db = TinyDB(
         os.getenv(
@@ -45,6 +57,63 @@ else:
     users = None  # type: ignore[assignment]
     profiles = None  # type: ignore[assignment]
     incidents_tinydb = None  # type: ignore[assignment]
+
+
+# --- Conexión 2: Motor SQLModel apuntando a Supabase (PostgreSQL) para Inventario ---
+def _normalize_database_url(raw_url: str | None) -> str | None:
+    """Normaliza la URI PostgreSQL de DATABASE_URL sin codificar credenciales en el código."""
+    if not raw_url:
+        return None
+    cleaned = raw_url.strip()
+    if not cleaned:
+        return None
+    if cleaned.startswith("postgres://"):
+        return "postgresql://" + cleaned[len("postgres://") :]
+    return cleaned
+
+
+DATABASE_URL: str | None = _normalize_database_url(os.getenv("DATABASE_URL"))
+engine = (
+    create_engine(DATABASE_URL, pool_pre_ping=True)
+    if DATABASE_URL is not None
+    else None
+)
+
+
+def get_engine() -> Any:
+    """Devuelve el motor SQLModel activo o lo inicializa si DATABASE_URL se definió en el entorno."""
+    global engine, DATABASE_URL
+    if engine is not None:
+        return engine
+    current_url = _normalize_database_url(os.getenv("DATABASE_URL"))
+    if current_url is not None:
+        DATABASE_URL = current_url
+        engine = create_engine(current_url, pool_pre_ping=True)
+        return engine
+    return None
+
+
+def create_inventory_tables(target_engine: Any = None) -> None:
+    """Inicializa el esquema relacional de inventario (SKU, StockEntry, StockExit) en Supabase."""
+    from services.api import models as _inventory_models  # noqa: F401
+
+    active_engine = target_engine if target_engine is not None else get_engine()
+    if active_engine is None:
+        return
+    SQLModel.metadata.create_all(active_engine)
+
+
+def get_db() -> Iterator[Session]:
+    """Dependencia por petición que inyecta una sesión SQLModel independiente mediante Depends(get_db)."""
+    active_engine = get_engine()
+    if active_engine is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="La conexión a la base de datos de inventario (DATABASE_URL) no está configurada.",
+        )
+    with Session(active_engine) as session:
+        yield session
+
 
 # --- SQLite persistence for the Centralized Incident Manager ---
 DEFAULT_DB_PATH = Path(__file__).resolve().parent / "incidents.db"
