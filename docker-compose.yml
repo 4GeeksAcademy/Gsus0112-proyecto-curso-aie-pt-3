@@ -1,0 +1,79 @@
+# TrackFlow — entorno de desarrollo completo con un solo comando:
+#   docker compose up
+# Variables y secretos: archivo .env en la raiz (ignorado por git). Ver .env.example.
+name: trackflow
+
+services:
+  # ---------------------------------------------------------------------------
+  # Contenedor de interfaces: website (3000) + backoffice (3001)
+  # ---------------------------------------------------------------------------
+  uis:
+    build:
+      context: ./uis
+    container_name: trackflow-uis
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_MODE: ${APP_MODE:-development}
+      # El navegador llama a /backend/* y Next.js lo reenvia al servicio "api".
+      NEXT_PUBLIC_API_URL: /backend
+      NEXT_PUBLIC_INVENTORY_API_URL: /backend
+      # Comunicacion entre contenedores por nombre de servicio Docker (no localhost).
+      API_INTERNAL_URL: http://api:8000
+      # Bind mounts desde Windows/macOS no siempre propagan eventos de ficheros:
+      # se usa polling para que la recarga en caliente funcione en cualquier host.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NEXT_DEV_FLAGS: ${NEXT_DEV_FLAGS:---webpack}
+    command: ["sh", "/app/start.sh"]
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      # Codigo fuente del host -> cambios visibles sin reconstruir la imagen.
+      - ./uis/website:/app/website
+      - ./uis/backoffice:/app/backoffice
+      - ./uis/start.sh:/app/start.sh:ro
+      # node_modules y .next se quedan dentro del contenedor (no se pisan con los del host).
+      - website_node_modules:/app/website/node_modules
+      - backoffice_node_modules:/app/backoffice/node_modules
+      - website_next:/app/website/.next
+      - backoffice_next:/app/backoffice/.next
+    depends_on:
+      - api
+    networks:
+      - trackflow-net
+
+  # ---------------------------------------------------------------------------
+  # Servicio FastAPI (TinyDB para auth + Supabase/PostgreSQL para inventario)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ./services
+      additional_contexts:
+        packages: ./packages
+    container_name: trackflow-api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services:/app/services
+      - ./packages:/app/packages
+    networks:
+      - trackflow-net
+
+networks:
+  trackflow-net:
+    name: trackflow-net
+    driver: bridge
+
+volumes:
+  website_node_modules:
+  backoffice_node_modules:
+  website_next:
+  backoffice_next:
