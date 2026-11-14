@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+.env*
+**/.env*
+*.log
+**/*.log
+**/*.tsbuildinfo
+talent-pipeline-tracker
+Dockerfile
+.dockerignore

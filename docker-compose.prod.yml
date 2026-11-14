@@ -1,0 +1,25 @@
+# Override de PRODUCCION para el VPS:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# - Sin bind mounts: el codigo va dentro de la imagen.
+# - Next.js compilado (next build + next start) y Uvicorn sin --reload.
+# - Datos de TinyDB/SQLite en un volumen persistente.
+# Las variables de produccion viven en el .env del VPS (nunca en Git).
+services:
+  uis:
+    environment:
+      APP_MODE: production
+      NODE_ENV: production
+    volumes: !reset []
+    restart: unless-stopped
+
+  api:
+    command: ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+    environment:
+      TRACKFLOW_DB_PATH: /data/db.json
+      INCIDENTS_DB_PATH: /data/incidents.db
+    volumes: !reset
+      - api_data:/data
+    restart: unless-stopped
+
+volumes:
+  api_data:
