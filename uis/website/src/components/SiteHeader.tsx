@@ -17,7 +17,11 @@ export function SiteHeader(): React.ReactElement {
             <a className="transition-colors hover:text-emerald-600" href={item.href} key={item.href}>{item.label}</a>
           ))}
         </nav>
-        <a className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" href="#contacto">
+        <a
+          className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          href="#contacto"
+          aria-label="Contactar con TrackFlow para empezar"
+        >
           Empezar
         </a>
       </div>

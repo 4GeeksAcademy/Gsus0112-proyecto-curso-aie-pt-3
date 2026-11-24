@@ -32,7 +32,11 @@ export default function HomePage(): React.ReactElement {
             <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">US ↔ España · Desde 2009</span>
             <h1 className="mt-7 text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">Unifica tu inventario y escala tus envíos sin fricción</h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 sm:text-xl">Logística de última milla que conecta tu inventario con cada puerta, sin perder el control por el camino.</p>
-            <a className="mt-8 inline-flex items-center gap-3 rounded-lg bg-emerald-500 px-6 py-3.5 font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900" href="#soluciones">
+            <a
+              className="mt-8 inline-flex items-center gap-3 rounded-lg bg-emerald-500 px-6 py-3.5 font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900"
+              href="#soluciones"
+              aria-label="Explorar las soluciones de logística integral de TrackFlow"
+            >
               Explorar soluciones <span aria-hidden="true">→</span>
             </a>
           </div>
