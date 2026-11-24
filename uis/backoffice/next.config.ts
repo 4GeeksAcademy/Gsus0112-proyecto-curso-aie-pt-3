@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
 	turbopack: {
 		root: process.cwd(),
 	},
+	experimental: {
+		cpus: 1,
+	},
 	async rewrites() {
 		if (!apiInternalUrl) {
 			return [];
