@@ -24,6 +24,7 @@ from ..schemas import (
     ExitType,
     SKUCategory,
     SKUCreate,
+    SKUListItem,
     SKUResponse,
     SKUSummary,
     StockEntryCreate,
@@ -122,7 +123,27 @@ def _build_sku_summary(sku_obj: SKU) -> SKUSummary:
         sku=sku_obj.sku,
         client_name=sku_obj.client_name,
         category=cast(SKUCategory, sku_obj.category),
+    )
+
+
+def _build_sku_list_item(
+    sku_obj: SKU, stock_map: dict[tuple[int, str], int]
+) -> SKUListItem:
+    if sku_obj.id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="El registro SKU no dispone de un identificador persistido.",
+        )
+    sku_id = sku_obj.id
+    current_stock = int(stock_map.get((sku_id, sku_obj.warehouse), 0))
+    return SKUListItem(
+        id=sku_id,
+        name=sku_obj.name,
+        sku=sku_obj.sku,
+        client_name=sku_obj.client_name,
+        category=cast(SKUCategory, sku_obj.category),
         warehouse=cast(WarehouseCode, sku_obj.warehouse),
+        current_stock=current_stock,
     )
 
 
@@ -150,12 +171,12 @@ def _build_sku_response(
     )
 
 
-@router.get("/products", response_model=list[SKUResponse])
+@router.get("/products", response_model=list[SKUListItem])
 def list_products(
     warehouse: WarehouseCode | None = None,
     session: Session = Depends(get_db),
-) -> list[SKUResponse]:
-    """Lista todos los SKUs con su `current_stock` calculado por almacén sin incurrir en N+1."""
+) -> list[SKUListItem]:
+    """Lista todos los SKUs en proyección ligera (`SKUListItem`) sin incurrir en N+1."""
     stmt = select(SKU).order_by(col(SKU.id))
     if warehouse is not None:
         stmt = stmt.where(SKU.warehouse == warehouse)
@@ -163,7 +184,7 @@ def list_products(
     skus = list(session.exec(stmt).all())
     sku_ids = [s.id for s in skus if s.id is not None]
     stock_map = _compute_stock_map(session, sku_ids)
-    return [_build_sku_response(sku_obj, stock_map) for sku_obj in skus]
+    return [_build_sku_list_item(sku_obj, stock_map) for sku_obj in skus]
 
 
 @router.post(
@@ -349,7 +370,6 @@ def list_orders(
             StockOrderResponse(
                 id=entry.id,
                 order_type="inbound",
-                sku_id=entry.sku_id,
                 sku=_build_sku_summary(sku_obj),
                 quantity=entry.quantity,
                 warehouse=cast(WarehouseCode, entry.warehouse),
@@ -368,7 +388,6 @@ def list_orders(
             StockOrderResponse(
                 id=exit_record.id,
                 order_type="outbound",
-                sku_id=exit_record.sku_id,
                 sku=_build_sku_summary(sku_obj),
                 quantity=exit_record.quantity,
                 warehouse=cast(WarehouseCode, exit_record.warehouse),

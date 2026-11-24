@@ -69,13 +69,13 @@ export interface SKUSummary {
   sku: string;
   client_name: string;
   category: SKUCategory;
-  warehouse: WarehouseCode;
+  warehouse?: WarehouseCode;
 }
 
 export interface StockOrderItem {
   id: number;
   order_type: OrderMovementType;
-  sku_id: number;
+  sku_id?: number;
   sku: SKUSummary;
   quantity: number;
   warehouse: WarehouseCode;

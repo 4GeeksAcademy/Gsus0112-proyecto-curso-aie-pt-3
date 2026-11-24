@@ -6,6 +6,7 @@ from tinydb import Query
 from ..database import suppliers
 from ..models import (
     SupplierCreate,
+    SupplierListItem,
     SupplierRateUpdate,
     SupplierResponse,
     SupplierStatusUpdate,
@@ -32,12 +33,12 @@ def create_supplier(
     return SupplierResponse(id=supplier_id, **data)
 
 
-@router.get("", response_model=list[SupplierResponse])
+@router.get("", response_model=list[SupplierListItem])
 def list_suppliers(
     country: str | None = None,
     category: str | None = None,
     current_user: UserDB = Depends(get_current_user),
-) -> list[SupplierResponse]:
+) -> list[SupplierListItem]:
     query = Query()
     condition = None
     if country is not None:
@@ -54,7 +55,21 @@ def list_suppliers(
             status_code=500,
             detail="No se pudo obtener el directorio de proveedores.",
         ) from exc
-    return [SupplierResponse(id=record.doc_id, **record) for record in records]
+    return [
+        SupplierListItem(
+            id=record.doc_id,
+            name=record["name"],
+            country=record["country"],
+            categories=record["categories"],
+            rate_per_shipment=record["rate_per_shipment"],
+            currency=record["currency"],
+            service_zone=record["service_zone"],
+            contact_email=record["contact_email"],
+            notes=record.get("notes"),
+            status=record["status"],
+        )
+        for record in records
+    ]
 
 
 @router.get("/{id}", response_model=SupplierResponse)
@@ -113,7 +128,7 @@ def update_supplier_status(
     return get_supplier(id, current_user)
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}", status_code=204, response_model=None)
 def delete_supplier(
     id: int, current_user: UserDB = Depends(get_current_user)
 ) -> Response:

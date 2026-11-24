@@ -1,7 +1,7 @@
-"""Schemas Pydantic independientes de los modelos ORM SQLModel para el dominio de inventario de TrackFlow.
+"""Schemas Pydantic independientes de los modelos ORM SQLModel y de persistencia local de TrackFlow.
 
-Estos schemas definen los contratos de entrada (request) y salida (response) de `/inventory`.
-Ningún endpoint devuelve instancias `SQLModel` directamente.
+Estos schemas definen los contratos explícitos de entrada (request) y salida (response) de `/inventory`
+y `/api/incidents`. Ningún endpoint devuelve instancias `SQLModel` ni diccionarios sin filtrar.
 """
 
 from datetime import datetime
@@ -13,6 +13,23 @@ WarehouseCode = Literal["LA", "ZGZ"]
 SKUCategory = Literal["fashion", "electronics", "cosmetics"]
 ExitType = Literal["dispatch", "loss"]
 OrderMovementType = Literal["inbound", "outbound"]
+
+IncidentStatusLiteral = Literal["open", "in_progress", "resolved", "discarded"]
+IncidentOriginLiteral = Literal["customer", "branch", "internal"]
+IncidentBranchLiteral = Literal[
+    "central",
+    "la_warehouse",
+    "la_office",
+    "zaragoza_warehouse",
+    "zaragoza_office",
+]
+IncidentCategoryLiteral = Literal[
+    "lost_parcel",
+    "carrier_issue",
+    "delivery_failure",
+    "returns_issue",
+    "inventory_discrepancy",
+]
 
 
 class SKUCreate(BaseModel):
@@ -38,8 +55,20 @@ class SKUCreate(BaseModel):
         return cleaned
 
 
+class SKUListItem(BaseModel):
+    """Proyección plana y ligera para `GET /inventory/products` (omite `stock_by_warehouse`)."""
+
+    id: int
+    name: str
+    sku: str
+    client_name: str
+    category: SKUCategory
+    warehouse: WarehouseCode
+    current_stock: int
+
+
 class SKUResponse(BaseModel):
-    """Representación de respuesta de un SKU incluyendo su `current_stock` calculado por almacén."""
+    """Representación de detalle y creación de un SKU incluyendo desglose `stock_by_warehouse`."""
 
     id: int
     name: str
@@ -52,18 +81,19 @@ class SKUResponse(BaseModel):
 
 
 class SKUSummary(BaseModel):
-    """Datos resumidos del SKU incrustados al listar órdenes en `GET /inventory/orders`."""
+    """Proyección ligera del SKU incrustada al listar órdenes en `GET /inventory/orders`."""
 
     id: int
     name: str
     sku: str
     client_name: str
     category: SKUCategory
-    warehouse: WarehouseCode
 
 
 class StockEntryCreate(BaseModel):
     """Payload para registrar una recepción de mercancía (`POST /inventory/orders/inbound`)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     sku_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
@@ -93,6 +123,8 @@ class StockEntryResponse(BaseModel):
 
 class StockExitCreate(BaseModel):
     """Payload para registrar un despacho o baja de inventario (`POST /inventory/orders/outbound`)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     sku_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
@@ -130,11 +162,10 @@ class StockExitResponse(BaseModel):
 
 
 class StockOrderResponse(BaseModel):
-    """Movimiento consolidado de inventario (`StockEntry` o `StockExit`) con datos del `SKU` y `user_uuid`."""
+    """Movimiento consolidado de inventario con proyección `SKUSummary` (sin FK `sku_id` duplicada)."""
 
     id: int
     order_type: OrderMovementType
-    sku_id: int
     sku: SKUSummary
     quantity: int
     warehouse: WarehouseCode
@@ -143,3 +174,76 @@ class StockOrderResponse(BaseModel):
     tracking_number: str | None = None
     created_at: datetime
     user_uuid: str
+
+
+# =====================================================================
+# Schemas Pydantic — Gestor y Analizador de Incidencias (`/api/incidents`)
+# =====================================================================
+
+
+class IncidentCreateRequest(BaseModel):
+    """Esquema de entrada para `POST /api/incidents` (solo atributos escribibles)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    description: str
+    category: str
+    origin: str
+    branch: str
+    status: str | None = "open"
+
+
+class IncidentStatusUpdateRequest(BaseModel):
+    """Esquema de entrada para `PATCH /api/incidents/{incident_id}/status`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str
+
+
+class IncidentListItem(BaseModel):
+    """Proyección ligera para `GET /api/incidents` (omite `updated_at` y `source_ref`)."""
+
+    id: int
+    title: str
+    description: str
+    category: IncidentCategoryLiteral
+    status: IncidentStatusLiteral
+    origin: IncidentOriginLiteral
+    branch: IncidentBranchLiteral
+    created_at: str
+
+
+class IncidentDetailResponse(BaseModel):
+    """Esquema completo de detalle y confirmación de escritura de una incidencia (sin `source_ref`)."""
+
+    id: int
+    title: str
+    description: str
+    category: IncidentCategoryLiteral
+    status: IncidentStatusLiteral
+    origin: IncidentOriginLiteral
+    branch: IncidentBranchLiteral
+    created_at: str
+    updated_at: str
+
+
+class IncidentsSummaryResponse(BaseModel):
+    """Resumen agregado de métricas para `GET /api/incidents/summary`."""
+
+    total: int
+    by_status: dict[str, int]
+    by_category: dict[str, int]
+    by_origin: dict[str, int]
+    by_branch: dict[str, int]
+
+
+class IncidentAnalysisResponse(BaseModel):
+    """Métricas de análisis por lotes consumidas por `IncidentsAnalysis.tsx` (sin mapas internos extra)."""
+
+    total_records: int
+    valid_records: int
+    invalid_records: int
+    invalid_reasons: dict[str, int]
+    average_satisfaction: float | None

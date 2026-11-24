@@ -4,7 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from tinydb import Query
 
 from ..database import profiles, users
-from ..models import RoleEnum, UserCreate, UserDB, UserResponse, UserUpdate
+from ..models import (
+    RoleEnum,
+    UserCreate,
+    UserDB,
+    UserListItem,
+    UserRegistrationResponse,
+    UserResponse,
+    UserUpdate,
+)
 from ..security import get_current_user, get_password_hash
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -15,8 +23,8 @@ def _ensure_owner_or_admin(current_user: UserDB, id: int) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
-@router.post("", response_model=UserResponse, status_code=201)
-def create_user(user: UserCreate) -> UserResponse:
+@router.post("", response_model=UserRegistrationResponse, status_code=201)
+def create_user(user: UserCreate) -> UserRegistrationResponse:
     try:
         exists = users.contains(Query().email == user.email)
     except OSError as exc:
@@ -50,11 +58,16 @@ def create_user(user: UserCreate) -> UserResponse:
             detail="No se pudo crear el usuario en este momento.",
         ) from exc
 
-    return UserResponse(id=user_id, **data)
+    return UserRegistrationResponse(
+        id=user_id,
+        is_active=True,
+        role=RoleEnum.user,
+        created_at=data["created_at"],
+    )
 
 
-@router.get("", response_model=list[UserResponse])
-def list_users(_: UserDB = Depends(get_current_user)) -> list[UserResponse]:
+@router.get("", response_model=list[UserListItem])
+def list_users(_: UserDB = Depends(get_current_user)) -> list[UserListItem]:
     try:
         records = users.all()
     except OSError as exc:
@@ -62,7 +75,15 @@ def list_users(_: UserDB = Depends(get_current_user)) -> list[UserResponse]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo obtener la lista de usuarios.",
         ) from exc
-    return [UserResponse(id=record.doc_id, **record) for record in records]
+    return [
+        UserListItem(
+            id=record.doc_id,
+            email=record["email"],
+            is_active=record.get("is_active", True),
+            role=RoleEnum(record["role"]),
+        )
+        for record in records
+    ]
 
 
 @router.get("/{id}", response_model=UserResponse)
@@ -76,7 +97,13 @@ def get_user(id: int, _: UserDB = Depends(get_current_user)) -> UserResponse:
         ) from exc
     if record is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return UserResponse(id=record.doc_id, **record)
+    return UserResponse(
+        id=record.doc_id,
+        email=record["email"],
+        is_active=record.get("is_active", True),
+        role=RoleEnum(record["role"]),
+        created_at=record["created_at"],
+    )
 
 
 @router.put("/{id}", response_model=UserResponse)
@@ -119,7 +146,7 @@ def update_user(
     return get_user(id, current_user)
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}", status_code=204, response_model=None)
 def delete_user(id: int, current_user: UserDB = Depends(get_current_user)) -> Response:
     _ensure_owner_or_admin(current_user, id)
     try:
