@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { MetricCard } from '@/src/components/MetricCard';
 import { ServiceGrid } from '@/src/components/ServiceGrid';
 import { SiteFooter } from '@/src/components/SiteFooter';
@@ -17,7 +18,14 @@ export default function HomePage(): React.ReactElement {
     <main id="inicio">
       <SiteHeader />
       <section className="relative isolate overflow-hidden bg-slate-900 text-white">
-        <img className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1580674285054-bed31e145f59?auto=format&fit=crop&w=2000&q=90" alt="" />
+        <Image
+          className="absolute inset-0 -z-20 object-cover opacity-35"
+          src="https://images.unsplash.com/photo-1580674285054-bed31e145f59?auto=format&fit=crop&w=2000&q=80"
+          alt="Centro logístico y distribución de última milla TrackFlow"
+          fill
+          priority
+          sizes="100vw"
+        />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950 via-slate-900/90 to-emerald-950/30" />
         <div className="mx-auto flex min-h-[38rem] w-full max-w-7xl items-center px-4 py-20 sm:px-6 lg:min-h-[43rem] lg:px-8 lg:py-28">
           <div className="max-w-3xl">
