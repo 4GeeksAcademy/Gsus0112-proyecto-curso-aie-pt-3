@@ -9,8 +9,11 @@ from ..database import profiles, users
 from ..mailer import send_password_reset_email
 from ..models import (
     ChangePasswordRequest,
+    CurrentUserResponse,
     ForgotPasswordRequest,
+    MessageResponse,
     ResetPasswordRequest,
+    TokenResponse,
     UserDB,
 )
 from ..security import (
@@ -43,7 +46,7 @@ def _set_password(user_id: int, new_password: str) -> None:
         ) from exc
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
     try:
         user = users.get(Query().email == form_data.username)
@@ -67,7 +70,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/me")
+@router.get("/me", response_model=CurrentUserResponse)
 def read_me(current_user: UserDB = Depends(get_current_user)) -> dict[str, Any]:
     try:
         profile = profiles.get(Query().user_id == current_user.id) or {}
@@ -86,7 +89,7 @@ def read_me(current_user: UserDB = Depends(get_current_user)) -> dict[str, Any]:
     }
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(
     body: ForgotPasswordRequest, background_tasks: BackgroundTasks
 ) -> dict[str, str]:
@@ -102,7 +105,7 @@ def forgot_password(
     return {"detail": FORGOT_PASSWORD_MESSAGE}
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", response_model=MessageResponse)
 def reset_password(body: ResetPasswordRequest) -> dict[str, str]:
     invalid_token = HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST, detail="Token inválido o expirado"
@@ -135,7 +138,7 @@ def reset_password(body: ResetPasswordRequest) -> dict[str, str]:
     return {"detail": "Contraseña restablecida correctamente"}
 
 
-@router.post("/change-password")
+@router.post("/change-password", response_model=MessageResponse)
 def change_password(
     body: ChangePasswordRequest, current_user: UserDB = Depends(get_current_user)
 ) -> dict[str, str]:

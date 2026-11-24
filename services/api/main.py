@@ -42,6 +42,14 @@ from .routes.auth import router as auth_router  # noqa: E402
 from .routes.profiles import router as profiles_router  # noqa: E402
 from .routes.suppliers import router as suppliers_router  # noqa: E402
 from .routes.users import router as users_router  # noqa: E402
+from .schemas import (  # noqa: E402
+    IncidentAnalysisResponse,
+    IncidentCreateRequest,
+    IncidentDetailResponse,
+    IncidentListItem,
+    IncidentsSummaryResponse,
+    IncidentStatusUpdateRequest,
+)
 
 
 @asynccontextmanager
@@ -133,7 +141,7 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
     )
 
 
-@app.get("/api/incidents/summary")
+@app.get("/api/incidents/summary", response_model=IncidentsSummaryResponse)
 def read_incidents_summary() -> Any:
     try:
         return get_incidents_summary()
@@ -141,7 +149,7 @@ def read_incidents_summary() -> Any:
         return _internal_db_error_response()
 
 
-@app.get("/api/incidents")
+@app.get("/api/incidents", response_model=list[IncidentListItem])
 def read_incidents(
     status: Optional[str] = None,
     origin: Optional[str] = None,
@@ -197,22 +205,36 @@ def read_incidents(
         )
     except (sqlite3.Error, OSError):
         return _internal_db_error_response()
-    return [item.to_dict() for item in items]
+    return [
+        IncidentListItem(
+            id=item.id,
+            title=item.title,
+            description=item.description,
+            category=item.category,  # type: ignore[arg-type]
+            status=item.status,  # type: ignore[arg-type]
+            origin=item.origin,  # type: ignore[arg-type]
+            branch=item.branch,  # type: ignore[arg-type]
+            created_at=item.created_at,
+        ).model_dump()
+        for item in items
+    ]
 
 
-@app.post("/api/incidents", status_code=201)
-async def create_new_incident(request: Request) -> Any:
-    try:
-        payload = await request.json()
-    except Exception:
-        return _validation_error_response(
-            "body", "El cuerpo de la petición debe ser un objeto JSON válido."
-        )
-
-    if not isinstance(payload, dict):
-        return _validation_error_response(
-            "body", "El cuerpo de la petición debe ser un objeto JSON con los campos de la incidencia."
-        )
+@app.post("/api/incidents", response_model=IncidentDetailResponse, status_code=201)
+async def create_new_incident(body: IncidentCreateRequest) -> Any:
+    if isinstance(body, IncidentCreateRequest):
+        payload = body.model_dump(exclude_none=True)
+    else:
+        try:
+            payload = await body.json()  # type: ignore[attr-defined]
+        except Exception:
+            return _validation_error_response(
+                "body", "El cuerpo de la petición debe ser un objeto JSON válido."
+            )
+        if not isinstance(payload, dict):
+            return _validation_error_response(
+                "body", "El cuerpo de la petición debe ser un objeto JSON con los campos de la incidencia."
+            )
 
     is_valid, error_field, error_msg, normalized = validate_incident_payload(payload)
     if not is_valid or normalized is None:
@@ -225,10 +247,10 @@ async def create_new_incident(request: Request) -> Any:
         created = create_incident(normalized)
     except (sqlite3.Error, OSError):
         return _internal_db_error_response()
-    return created.to_dict()
+    return IncidentDetailResponse(**created.to_dict()).model_dump()
 
 
-@app.get("/api/incidents/{incident_id}")
+@app.get("/api/incidents/{incident_id}", response_model=IncidentDetailResponse)
 def read_incident_detail(incident_id: int) -> Any:
     try:
         incident = get_incident_by_id(incident_id)
@@ -243,22 +265,27 @@ def read_incident_detail(incident_id: int) -> Any:
                 "detail": f"No se encontró la incidencia con id {incident_id}.",
             },
         )
-    return incident.to_dict()
+    return IncidentDetailResponse(**incident.to_dict()).model_dump()
 
 
-@app.patch("/api/incidents/{incident_id}/status")
-async def patch_incident_status(incident_id: int, request: Request) -> Any:
-    try:
-        payload = await request.json()
-    except Exception:
-        return _validation_error_response(
-            "status", "El cuerpo de la petición debe ser un JSON válido con el campo 'status'."
-        )
-
-    if not isinstance(payload, dict):
-        return _validation_error_response(
-            "status", "El cuerpo de la petición debe ser un objeto JSON con el campo 'status'."
-        )
+@app.patch("/api/incidents/{incident_id}/status", response_model=IncidentDetailResponse)
+async def patch_incident_status(
+    incident_id: int, body: IncidentStatusUpdateRequest
+) -> Any:
+    if isinstance(body, IncidentStatusUpdateRequest):
+        raw_status = body.status
+    else:
+        try:
+            payload = await body.json()  # type: ignore[attr-defined]
+        except Exception:
+            return _validation_error_response(
+                "status", "El cuerpo de la petición debe ser un JSON válido con el campo 'status'."
+            )
+        if not isinstance(payload, dict):
+            return _validation_error_response(
+                "status", "El cuerpo de la petición debe ser un objeto JSON con el campo 'status'."
+            )
+        raw_status = payload.get("status")
 
     try:
         incident = get_incident_by_id(incident_id)
@@ -274,7 +301,6 @@ async def patch_incident_status(incident_id: int, request: Request) -> Any:
             },
         )
 
-    raw_status = payload.get("status")
     new_status = "" if raw_status is None else str(raw_status).strip()
     is_valid, error_msg = validate_status_transition(incident.status, new_status)
     if not is_valid:
@@ -295,10 +321,10 @@ async def patch_incident_status(incident_id: int, request: Request) -> Any:
                 "detail": f"No se encontró la incidencia con id {incident_id}.",
             },
         )
-    return updated.to_dict()
+    return IncidentDetailResponse(**updated.to_dict()).model_dump()
 
 
-@app.post("/api/incidents/analyze")
+@app.post("/api/incidents/analyze", response_model=IncidentAnalysisResponse)
 async def analyze_incidents(file: UploadFile = File(...)) -> dict[str, Any]:
     global last_analysis
 
@@ -326,10 +352,26 @@ async def analyze_incidents(file: UploadFile = File(...)) -> dict[str, Any]:
         ) from error
 
     last_analysis = results
-    return results
+    return IncidentAnalysisResponse(
+        total_records=results["total_records"],
+        valid_records=results["valid_records"],
+        invalid_records=results["invalid_records"],
+        invalid_reasons=results["invalid_reasons"],
+        average_satisfaction=results["average_satisfaction"],
+    ).model_dump()
 
 
-@app.get("/api/incidents/results/export")
+@app.get(
+    "/api/incidents/results/export",
+    response_class=StreamingResponse,
+    response_model=None,
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "Exportación en CSV de las métricas del último análisis de incidencias.",
+        }
+    },
+)
 def export_results() -> StreamingResponse:
     analysis = last_analysis
     if analysis is None:

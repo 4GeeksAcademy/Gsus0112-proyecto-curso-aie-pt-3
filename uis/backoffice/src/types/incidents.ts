@@ -29,7 +29,7 @@ export interface Incident {
   origin: IncidentOrigin;
   branch: IncidentBranch;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface IncidentCreateInput {
