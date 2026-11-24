@@ -1,3 +1,6 @@
+import React from 'react';
+import { MetricCard } from './MetricCard';
+
 const kpis = [
   { id: 'envios', label: 'Red activa', value: '8', unit: 'transportistas', indicator: 'bg-emerald-500' },
   { id: 'huella-operativa', label: 'Huella operativa', value: '2', unit: 'almacenes', indicator: 'bg-blue-500' },
@@ -5,19 +8,20 @@ const kpis = [
   { id: 'experiencia-cliente', label: 'Potencial CX', value: '80%', unit: 'consultas automatizables', indicator: 'bg-rose-500' },
 ];
 
-/** Presenta indicadores de negocio confirmados en el briefing. */
+/** Presenta indicadores de negocio confirmados en el briefing utilizando el componente compartido MetricCard. */
 export function KpiGrid(): React.ReactElement {
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores de operación">
       {kpis.map((kpi) => (
-        <article id={kpi.id} className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" key={kpi.label}>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">{kpi.label}</span>
-            <span className={`h-2.5 w-2.5 rounded-full ${kpi.indicator}`} />
-          </div>
-          <strong className="mt-5 block text-3xl font-bold text-slate-900">{kpi.value}</strong>
-          <small className="mt-2 block text-sm text-slate-500">{kpi.unit}</small>
-        </article>
+        <MetricCard
+          key={kpi.id}
+          id={kpi.id}
+          label={kpi.label}
+          value={kpi.value}
+          unit={kpi.unit}
+          indicatorColor={kpi.indicator}
+          variant="bordered"
+        />
       ))}
     </section>
   );

@@ -1,3 +1,4 @@
+import { MetricCard } from '@/src/components/MetricCard';
 import { ServiceGrid } from '@/src/components/ServiceGrid';
 import { SiteFooter } from '@/src/components/SiteFooter';
 import { SiteHeader } from '@/src/components/SiteHeader';
@@ -33,10 +34,12 @@ export default function HomePage(): React.ReactElement {
       <section className="relative z-10 mx-auto -mt-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Cifras clave de TrackFlow">
         <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 lg:grid-cols-4">
           {metrics.map((metric) => (
-            <div className="border-b border-r border-slate-100 p-6 text-center last:border-r-0 sm:p-8 lg:border-b-0" key={metric.label}>
-              <strong className="block text-4xl font-extrabold text-emerald-600">{metric.value}</strong>
-              <span className="mt-2 block text-sm text-slate-500">{metric.label}</span>
-            </div>
+            <MetricCard
+              key={metric.label}
+              value={metric.value}
+              label={metric.label}
+              variant="minimal"
+            />
           ))}
         </div>
       </section>
