@@ -5,8 +5,10 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 import csv
 import io
+import logging
 import sqlite3
 import sys
+import time
 from pathlib import Path
 from typing import Any, AsyncIterator, Optional
 
@@ -37,6 +39,7 @@ from services.api.database import (  # noqa: E402
     list_incidents,
     update_incident_status,
 )
+from .cache import INCIDENTS_SUMMARY_TTL_SECONDS, app_cache  # noqa: E402
 from .routers.inventory import router as inventory_router  # noqa: E402
 from .routes.auth import router as auth_router  # noqa: E402
 from .routes.profiles import router as profiles_router  # noqa: E402
@@ -73,6 +76,46 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+timing_logger = logging.getLogger("api.timing")
+
+
+class TimingMiddleware:
+    """Middleware ASGI puro de medición de latencia por petición (sin dependencias ni overhead de hilos)."""
+
+    def __init__(self, asgi_app: Any) -> None:
+        self.app = asgi_app
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        start = time.perf_counter()
+        status_code = 500
+
+        async def send_with_timing(message: dict[str, Any]) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = int(message["status"])
+                duration_ms = (time.perf_counter() - start) * 1000.0
+                headers = list(message.get("headers", []))
+                headers.append(
+                    (b"x-response-time-ms", f"{duration_ms:.2f}".encode("latin-1"))
+                )
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_timing)
+        duration = (time.perf_counter() - start) * 1000.0
+        path = scope.get("path", "")
+        raw_qs = scope.get("query_string", b"")
+        qs = f"?{raw_qs.decode('latin-1')}" if raw_qs else ""
+        method = scope.get("method", "GET")
+        timing_logger.info(f"{method} {path}{qs} → {status_code} | {duration:.1f}ms")
+
+
+app.add_middleware(TimingMiddleware)
 
 init_db()
 
@@ -143,10 +186,18 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
 
 @app.get("/api/incidents/summary", response_model=IncidentsSummaryResponse)
 def read_incidents_summary() -> Any:
+    cache_key = "incidents:summary"
+    hit, cached_summary = app_cache.get(cache_key)
+    if hit:
+        return cached_summary
+
     try:
-        return get_incidents_summary()
+        summary = get_incidents_summary()
     except (sqlite3.Error, OSError):
         return _internal_db_error_response()
+
+    app_cache.set(cache_key, summary, ttl_seconds=INCIDENTS_SUMMARY_TTL_SECONDS)
+    return summary
 
 
 @app.get("/api/incidents", response_model=list[IncidentListItem])
@@ -247,6 +298,7 @@ async def create_new_incident(body: IncidentCreateRequest) -> Any:
         created = create_incident(normalized)
     except (sqlite3.Error, OSError):
         return _internal_db_error_response()
+    app_cache.invalidate_prefix("incidents:")
     return IncidentDetailResponse(**created.to_dict()).model_dump()
 
 
@@ -321,6 +373,7 @@ async def patch_incident_status(
                 "detail": f"No se encontró la incidencia con id {incident_id}.",
             },
         )
+    app_cache.invalidate_prefix("incidents:")
     return IncidentDetailResponse(**updated.to_dict()).model_dump()
 
 

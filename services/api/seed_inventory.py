@@ -12,6 +12,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from services.api.cache import app_cache  # noqa: E402
 from services.api.database import create_inventory_tables, get_engine, users  # noqa: E402
 from services.api.models import SKU, StockEntry, StockExit  # noqa: E402
 from services.api.schemas import SKUCreate, StockEntryCreate, StockExitCreate  # noqa: E402
@@ -264,6 +265,7 @@ def seed_inventory(
 
         session.commit()
 
+    app_cache.invalidate_prefix("inventory:")
     return {
         "skus": inserted_skus,
         "entries": inserted_entries,
