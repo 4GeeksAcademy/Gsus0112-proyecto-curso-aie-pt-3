@@ -1,0 +1,903 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://trackflow.internal/schemas/telemetry/event-schemas.json",
+  "title": "TrackFlow Telemetry Event Schemas",
+  "description": "Esquema maestro JSON Schema draft-07 para validar el Event Envelope estándar y los allowlists cerrados (additionalProperties: false) de los 20 eventos del Plan de Telemetría de TrackFlow (v1.0.0).",
+  "oneOf": [
+    { "$ref": "#/definitions/inbound_order_created" },
+    { "$ref": "#/definitions/outbound_order_created" },
+    { "$ref": "#/definitions/stock_threshold_triggered" },
+    { "$ref": "#/definitions/direct_stock_edit_rejected" },
+    { "$ref": "#/definitions/inventory_discrepancy_detected" },
+    { "$ref": "#/definitions/product_created" },
+    { "$ref": "#/definitions/inventory_order_validation_failed" },
+    { "$ref": "#/definitions/outbound_stock_insufficient_rejected" },
+    { "$ref": "#/definitions/inventory_order_form_abandoned" },
+    { "$ref": "#/definitions/incident_created" },
+    { "$ref": "#/definitions/incident_status_transitioned" },
+    { "$ref": "#/definitions/supplier_rate_updated" },
+    { "$ref": "#/definitions/auth_login_succeeded" },
+    { "$ref": "#/definitions/auth_login_failed" },
+    { "$ref": "#/definitions/session_expired" },
+    { "$ref": "#/definitions/api_latency_recorded" },
+    { "$ref": "#/definitions/page_load_measured" },
+    { "$ref": "#/definitions/frontend_error_uncaught" },
+    { "$ref": "#/definitions/backend_storage_failed" },
+    { "$ref": "#/definitions/backoffice_section_viewed" }
+  ],
+  "definitions": {
+    "WarehouseCanonical": {
+      "type": "string",
+      "enum": ["los_angeles", "zaragoza"],
+      "description": "Identificador canónico del almacén según trackflow-BRIEFING.md (normalizado desde LA/ZGZ)."
+    },
+    "CountryCode": {
+      "type": "string",
+      "enum": ["US", "ES"],
+      "description": "Código ISO de país para agregaciones transfronterizas entre Estados Unidos y España."
+    },
+    "ProductCategory": {
+      "type": "string",
+      "enum": ["fashion", "electronics", "cosmetics"],
+      "description": "Categoría oficial de SKU en TrackFlow."
+    },
+    "ActorRole": {
+      "type": "string",
+      "enum": ["admin", "manager", "user"],
+      "description": "Rol RBAC del operador autenticado."
+    },
+    "EventEnvelopeBase": {
+      "type": "object",
+      "required": [
+        "eventId",
+        "timestamp",
+        "sessionId",
+        "userId",
+        "event_type",
+        "schemaVersion",
+        "requestId",
+        "properties"
+      ],
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid",
+          "minLength": 36,
+          "maxLength": 36,
+          "description": "UUID v4 único del evento para deduplicación idempotente."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+          "description": "Marca temporal en formato ISO 8601 UTC."
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "description": "Identificador efímero de la sesión cliente o corrida interna."
+        },
+        "userId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Identificador pseudonimizado user_uuid del operador (jamás email ni nombre); null solo antes de login."
+        },
+        "event_type": {
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)+$",
+          "description": "Tipo de evento siguiendo la taxonomía estricta entidad_acción."
+        },
+        "schemaVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Versión semántica del esquema del evento (ej. 1.0.0)."
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "description": "Identificador de correlación X-Request-ID entre frontend, backend y logs."
+        },
+        "properties": {
+          "type": "object",
+          "description": "Payload específico del evento sujeto a allowlist estricto."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "inbound_order_created": {
+      "description": "[OBLIGATORIO BRIEFING · STREAM/BATCH: batch 15m · PII: ninguna] Recepción de mercancía (InboundOrder) de un cliente marca en Los Ángeles o Zaragoza.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "inbound_order_created" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "order_id",
+                "reference",
+                "resulting_stock"
+              ],
+              "properties": {
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": { "$ref": "#/definitions/ProductCategory" },
+                "quantity": { "type": "integer", "minimum": 1 },
+                "order_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "reference": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "resulting_stock": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "outbound_order_created": {
+      "description": "[OBLIGATORIO BRIEFING · BATCH 15m · PII: ninguna (excluye transportista y destinatario B2C)] Preparación y despacho o baja auditada de mercancía (OutboundOrder).",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "outbound_order_created" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "order_id",
+                "exit_reason",
+                "resulting_stock"
+              ],
+              "properties": {
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": { "$ref": "#/definitions/ProductCategory" },
+                "quantity": { "type": "integer", "minimum": 1 },
+                "order_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "exit_reason": { "type": "string", "enum": ["dispatch", "loss"] },
+                "resulting_stock": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "stock_threshold_triggered": {
+      "description": "[OBLIGATORIO BRIEFING · STREAM <5s · PII: ninguna] El stock disponible de un SKU cae por debajo del umbral mínimo configurado para su cliente.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "stock_threshold_triggered" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "previous_stock",
+                "threshold_quantity",
+                "severity",
+                "trigger_order_id"
+              ],
+              "properties": {
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": { "$ref": "#/definitions/ProductCategory" },
+                "quantity": { "type": "integer", "minimum": 0 },
+                "previous_stock": { "type": "integer", "minimum": 0 },
+                "threshold_quantity": { "type": "integer", "minimum": 1 },
+                "severity": { "type": "string", "enum": ["low", "critical", "stockout"] },
+                "trigger_order_id": { "type": "string", "minLength": 1, "maxLength": 64 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "direct_stock_edit_rejected": {
+      "description": "[OBLIGATORIO BRIEFING · STREAM <5s · PII: ninguna] Intento rechazado de modificar stock directamente fuera de InboundOrder/OutboundOrder.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "direct_stock_edit_rejected" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "attempted_endpoint",
+                "http_method",
+                "rejected_field",
+                "actor_role"
+              ],
+              "properties": {
+                "warehouse": {
+                  "type": "string",
+                  "enum": ["los_angeles", "zaragoza", "unknown"]
+                },
+                "country": { "type": "string", "enum": ["US", "ES", "unknown"] },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": {
+                  "type": "string",
+                  "enum": ["fashion", "electronics", "cosmetics", "unknown"]
+                },
+                "quantity": { "type": "integer" },
+                "attempted_endpoint": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "http_method": {
+                  "type": "string",
+                  "enum": ["POST", "PUT", "PATCH", "DELETE"]
+                },
+                "rejected_field": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "actor_role": {
+                  "type": "string",
+                  "enum": ["admin", "manager", "user", "anonymous"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "inventory_discrepancy_detected": {
+      "description": "[OBLIGATORIO BRIEFING · STREAM <10s · PII: ninguna] Diferencia detectada en conteo físico o auditoría entre el stock del sistema y el stock real en estantería.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "inventory_discrepancy_detected" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "system_stock",
+                "actual_stock",
+                "discrepancy_direction",
+                "detection_source"
+              ],
+              "properties": {
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": { "$ref": "#/definitions/ProductCategory" },
+                "quantity": { "type": "integer", "minimum": 1 },
+                "system_stock": { "type": "integer", "minimum": 0 },
+                "actual_stock": { "type": "integer", "minimum": 0 },
+                "discrepancy_direction": {
+                  "type": "string",
+                  "enum": ["shortage", "surplus"]
+                },
+                "detection_source": {
+                  "type": "string",
+                  "enum": ["cycle_count", "picking_check", "inbound_audit", "incident_report"]
+                },
+                "incident_id": { "type": ["integer", "null"], "minimum": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "product_created": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 1h · PII: ninguna] Alta de nuevo SKU en el catálogo de inventario con stock inicial cero.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "product_created" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "sku_db_id"
+              ],
+              "properties": {
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": { "$ref": "#/definitions/ProductCategory" },
+                "quantity": { "type": "integer", "const": 0 },
+                "sku_db_id": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "inventory_order_validation_failed": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 1h · PII: sanitizada (omite valor crudo introducido)] Fallo de validación en alta de orden o producto de inventario.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "inventory_order_validation_failed" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "product_id",
+                "order_movement_type",
+                "failed_field",
+                "error_code",
+                "http_status"
+              ],
+              "properties": {
+                "warehouse": {
+                  "type": "string",
+                  "enum": ["los_angeles", "zaragoza", "unknown"]
+                },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "order_movement_type": {
+                  "type": "string",
+                  "enum": ["inbound", "outbound", "product_catalog"]
+                },
+                "failed_field": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "error_code": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "http_status": { "type": "integer", "enum": [400, 409, 422] }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "outbound_stock_insufficient_rejected": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · STREAM <10s · PII: ninguna] Orden de salida rechazada con HTTP 400 porque la cantidad solicitada supera el stock disponible del almacén.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "outbound_stock_insufficient_rejected" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "warehouse",
+                "country",
+                "client_id",
+                "product_id",
+                "product_category",
+                "quantity",
+                "available_stock",
+                "deficit_quantity",
+                "other_warehouse_stock"
+              ],
+              "properties": {
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "client_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "product_category": { "$ref": "#/definitions/ProductCategory" },
+                "quantity": { "type": "integer", "minimum": 1 },
+                "available_stock": { "type": "integer", "minimum": 0 },
+                "deficit_quantity": { "type": "integer", "minimum": 1 },
+                "other_warehouse_stock": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "inventory_order_form_abandoned": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 24h · PII: ninguna (solo metadatos de interacción)] Abandono de formulario de orden tras haber modificado al menos un campo.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "inventory_order_form_abandoned" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "order_movement_type",
+                "warehouse",
+                "fields_touched_count",
+                "last_field_interacted",
+                "had_validation_error",
+                "time_spent_ms"
+              ],
+              "properties": {
+                "order_movement_type": {
+                  "type": "string",
+                  "enum": ["inbound", "outbound"]
+                },
+                "warehouse": { "$ref": "#/definitions/WarehouseCanonical" },
+                "fields_touched_count": { "type": "integer", "minimum": 1, "maximum": 20 },
+                "last_field_interacted": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "had_validation_error": { "type": "boolean" },
+                "time_spent_ms": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "incident_created": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 5m · PII: sanitizada (omite title y description en texto libre)] Registro de nueva incidencia operativa.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "incident_created" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "incident_id",
+                "category",
+                "origin",
+                "branch",
+                "country",
+                "initial_status",
+                "description_length"
+              ],
+              "properties": {
+                "incident_id": { "type": "integer", "minimum": 1 },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "lost_parcel",
+                    "carrier_issue",
+                    "delivery_failure",
+                    "returns_issue",
+                    "inventory_discrepancy"
+                  ]
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": ["customer", "branch", "internal"]
+                },
+                "branch": {
+                  "type": "string",
+                  "enum": [
+                    "central",
+                    "la_warehouse",
+                    "la_office",
+                    "zaragoza_warehouse",
+                    "zaragoza_office"
+                  ]
+                },
+                "country": { "$ref": "#/definitions/CountryCode" },
+                "initial_status": {
+                  "type": "string",
+                  "enum": ["open", "in_progress", "resolved", "discarded"]
+                },
+                "description_length": { "type": "integer", "minimum": 5 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "incident_status_transitioned": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 15m · PII: ninguna] Cambio de estado de incidencia operativa con medición de tiempo de permanencia para MTTR.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "incident_status_transitioned" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "incident_id",
+                "category",
+                "branch",
+                "previous_status",
+                "new_status",
+                "time_in_previous_status_sec",
+                "is_terminal"
+              ],
+              "properties": {
+                "incident_id": { "type": "integer", "minimum": 1 },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "lost_parcel",
+                    "carrier_issue",
+                    "delivery_failure",
+                    "returns_issue",
+                    "inventory_discrepancy"
+                  ]
+                },
+                "branch": {
+                  "type": "string",
+                  "enum": [
+                    "central",
+                    "la_warehouse",
+                    "la_office",
+                    "zaragoza_warehouse",
+                    "zaragoza_office"
+                  ]
+                },
+                "previous_status": {
+                  "type": "string",
+                  "enum": ["open", "in_progress"]
+                },
+                "new_status": {
+                  "type": "string",
+                  "enum": ["in_progress", "resolved", "discarded"]
+                },
+                "time_in_previous_status_sec": { "type": "number", "minimum": 0 },
+                "is_terminal": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "supplier_rate_updated": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 24h · PII: sanitizada (omite contact_email y notes)] Actualización de tarifa o estado operativo de un proveedor logístico.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "supplier_rate_updated" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "supplier_id",
+                "country",
+                "currency",
+                "previous_rate",
+                "new_rate",
+                "rate_delta_pct",
+                "supplier_status"
+              ],
+              "properties": {
+                "supplier_id": { "type": "integer", "minimum": 1 },
+                "country": { "type": "string", "minLength": 2, "maxLength": 3 },
+                "currency": { "type": "string", "enum": ["EUR", "USD", "OTHER"] },
+                "previous_rate": { "type": "number", "exclusiveMinimum": 0 },
+                "new_rate": { "type": "number", "exclusiveMinimum": 0 },
+                "rate_delta_pct": { "type": "number" },
+                "supplier_status": { "type": "string", "enum": ["active", "suspended"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "auth_login_succeeded": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 1h · PII: ninguna (sin email ni JWT)] Inicio de sesión exitoso de un operador en el backoffice.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "auth_login_succeeded" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["actor_role", "auth_method"],
+              "properties": {
+                "actor_role": { "$ref": "#/definitions/ActorRole" },
+                "auth_method": { "type": "string", "enum": ["password_form"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "auth_login_failed": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · STREAM <5s · PII: anonimizada con HMAC-SHA256 sobre email y máscara /24 sobre IP] Intento fallido de inicio de sesión.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "auth_login_failed" },
+            "userId": { "type": "null" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "failure_reason",
+                "email_domain",
+                "email_hash_sha256",
+                "ip_subnet_masked"
+              ],
+              "properties": {
+                "failure_reason": {
+                  "type": "string",
+                  "enum": ["unknown_account", "invalid_password", "inactive_account"]
+                },
+                "email_domain": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "email_hash_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "ip_subnet_masked": { "type": "string", "minLength": 7, "maxLength": 64 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "session_expired": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 24h · PII: sanitizada (ruta sin query params)] Expiración o rechazo 401 de sesión activa en el cliente.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "session_expired" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["interrupted_route", "failed_api_path"],
+              "properties": {
+                "interrupted_route": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "failed_api_path": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "session_age_sec": { "type": ["integer", "null"], "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "api_latency_recorded": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 5m (muestreo adaptativo) · PII: ninguna] Medición de latencia HTTP y estado de caché en FastAPI.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "api_latency_recorded" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "http_method",
+                "route_template",
+                "status_code",
+                "duration_ms",
+                "cache_status"
+              ],
+              "properties": {
+                "http_method": {
+                  "type": "string",
+                  "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+                },
+                "route_template": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "status_code": { "type": "integer", "minimum": 100, "maximum": 599 },
+                "duration_ms": { "type": "number", "minimum": 0 },
+                "cache_status": { "type": "string", "enum": ["hit", "miss", "bypass"] },
+                "warehouse_filter": {
+                  "type": ["string", "null"],
+                  "enum": ["los_angeles", "zaragoza", "all", null]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "page_load_measured": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 15m · PII: ninguna] Métricas reales de carga e hidratación (LCP/TTFB) en el navegador del operador.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "page_load_measured" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_path",
+                "lcp_ms",
+                "ttfb_ms",
+                "viewport_category"
+              ],
+              "properties": {
+                "route_path": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "lcp_ms": { "type": "number", "minimum": 0 },
+                "ttfb_ms": { "type": "number", "minimum": 0 },
+                "hydration_ms": { "type": ["number", "null"], "minimum": 0 },
+                "viewport_category": {
+                  "type": "string",
+                  "enum": ["mobile", "tablet", "desktop"]
+                },
+                "connection_effective_type": {
+                  "type": ["string", "null"],
+                  "enum": ["4g", "3g", "2g", "slow-2g", "unknown", null]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "frontend_error_uncaught": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · STREAM <15s (throttle 60s) · PII: sanitizada por regex eliminando emails/JWT/tokens] Error no capturado en la interfaz.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "frontend_error_uncaught" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_path",
+                "component_name",
+                "error_name",
+                "sanitized_message",
+                "is_network_failure",
+                "occurrences_suppressed"
+              ],
+              "properties": {
+                "route_path": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "component_name": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "error_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+                "sanitized_message": { "type": "string", "minLength": 1, "maxLength": 200 },
+                "is_network_failure": { "type": "boolean" },
+                "occurrences_suppressed": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "backend_storage_failed": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · STREAM <5s · PII: sanitizada (omite mensaje crudo con credenciales de conexión)] Fallo en capa de persistencia del backend.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "backend_storage_failed" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "storage_engine",
+                "operation",
+                "route_template",
+                "exception_class",
+                "http_status_returned"
+              ],
+              "properties": {
+                "storage_engine": {
+                  "type": "string",
+                  "enum": ["supabase_postgresql", "sqlite_incidents", "tinydb_local"]
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": ["read", "write", "delete", "schema_init"]
+                },
+                "route_template": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "exception_class": { "type": "string", "minLength": 1, "maxLength": 80 },
+                "http_status_returned": { "type": "integer", "enum": [500, 503] }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "backoffice_section_viewed": {
+      "description": "[OPORTUNIDAD IDENTIFICADA · BATCH 24h (debounce 1000ms) · PII: ninguna] Navegación efectiva entre módulos del backoffice.",
+      "allOf": [
+        { "$ref": "#/definitions/EventEnvelopeBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "backoffice_section_viewed" },
+            "userId": { "type": "string" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["section_id", "route_path", "actor_role"],
+              "properties": {
+                "section_id": {
+                  "type": "string",
+                  "enum": [
+                    "resumen",
+                    "inventario_skus",
+                    "orden_entrada",
+                    "orden_salida",
+                    "historial_ordenes",
+                    "incidencias",
+                    "proveedores",
+                    "mi_perfil"
+                  ]
+                },
+                "route_path": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "previous_section_id": { "type": ["string", "null"], "maxLength": 64 },
+                "dwell_time_previous_ms": { "type": ["integer", "null"], "minimum": 0 },
+                "actor_role": { "$ref": "#/definitions/ActorRole" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
