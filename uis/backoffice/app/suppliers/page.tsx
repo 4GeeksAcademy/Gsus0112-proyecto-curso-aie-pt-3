@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 
 import { AuthGuard } from '@/src/components/AuthGuard';
@@ -153,11 +153,70 @@ function SupplierDirectory(): ReactElement {
     setReload((value) => value + 1);
   }
 
+  // Memoiza agregaciones operativas sobre el directorio completo para no recalcularlas
+  // cuando cambian estados transitorios del formulario (saving, error, success).
+  const directoryStats = useMemo(() => {
+    let activeCount = 0;
+    let suspendedCount = 0;
+    const countries = new Set<string>();
+    const categoriesSet = new Set<string>();
+    const ratesByCurrency: Record<string, { sum: number; count: number }> = {};
+
+    for (const item of suppliers) {
+      if (item.status === 'active') activeCount += 1;
+      else suspendedCount += 1;
+
+      if (item.country) countries.add(item.country);
+      for (const cat of item.categories ?? []) {
+        if (cat) categoriesSet.add(cat);
+      }
+
+      const curr = item.currency || 'USD';
+      const bucket = ratesByCurrency[curr] ?? { sum: 0, count: 0 };
+      bucket.sum += item.rate_per_shipment;
+      bucket.count += 1;
+      ratesByCurrency[curr] = bucket;
+    }
+
+    const avgByCurrency = Object.entries(ratesByCurrency).map(([curr, { sum, count }]) => ({
+      currency: curr,
+      average: count > 0 ? (sum / count).toFixed(2) : '0.00',
+    }));
+
+    return {
+      activeCount,
+      suspendedCount,
+      countriesCount: countries.size,
+      categoriesCount: categoriesSet.size,
+      avgByCurrency,
+    };
+  }, [suppliers]);
+
   return (
     <div className="min-h-screen bg-slate-50 md:pl-64">
       <Sidebar />
       <main className="mx-auto min-w-0 max-w-7xl px-4 py-8 sm:px-6">
-        <h1 className="mb-6 text-2xl font-bold text-slate-900">Directorio de Proveedores</h1>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold text-slate-900">Directorio de Proveedores</h1>
+          {suppliers.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">
+                Activos: {directoryStats.activeCount}
+              </span>
+              <span className="rounded-full bg-slate-200 px-3 py-1 text-slate-700">
+                Suspendidos: {directoryStats.suspendedCount}
+              </span>
+              <span className="rounded-full bg-sky-100 px-3 py-1 text-sky-800">
+                Países: {directoryStats.countriesCount} · Categorías: {directoryStats.categoriesCount}
+              </span>
+              {directoryStats.avgByCurrency.map((entry) => (
+                <span key={entry.currency} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700">
+                  Media {entry.currency}: {entry.average}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
         {error && (
           <div role="alert" className="mb-4 rounded-lg border-l-4 border-red-600 bg-red-50 p-4 text-sm text-red-800">
             <p className="font-semibold">{error}</p>

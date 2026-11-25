@@ -1,13 +1,28 @@
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { ReactElement } from 'react';
 
 import { AuthGuard } from '@/src/components/AuthGuard';
 import { CentralizedIncidentManager } from '@/src/components/CentralizedIncidentManager';
-import { IncidentsAnalysis } from '@/src/components/IncidentsAnalysis';
 import { KpiGrid } from '@/src/components/KpiGrid';
 import { OperationsPanel } from '@/src/components/OperationsPanel';
 import { Sidebar } from '@/src/components/Sidebar';
 import { WarehouseHealth } from '@/src/components/WarehouseHealth';
+
+const IncidentsAnalysis = dynamic(
+  () => import('@/src/components/IncidentsAnalysis').then((mod) => mod.IncidentsAnalysis),
+  {
+    loading: () => (
+      <section
+        aria-busy="true"
+        aria-label="Cargando analizador de incidencias CSV"
+        className="mt-12 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm"
+      >
+        Cargando módulo de análisis por lotes CSV...
+      </section>
+    ),
+  },
+);
 
 /** Renderiza el resumen operativo principal del backoffice junto con el gestor centralizado de incidencias. */
 export default function DashboardPage(): ReactElement {

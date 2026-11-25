@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { DragEvent, ReactElement } from 'react';
 
 import { API_BASE_URL } from '../utils/api';
@@ -111,6 +111,12 @@ export function IncidentsAnalysis(): ReactElement {
       void analyzeFile(droppedFile);
     }
   };
+
+  const sortedInvalidReasons = useMemo(
+    () =>
+      Object.entries(results?.invalid_reasons ?? {}).sort((a, b) => b[1] - a[1]),
+    [results?.invalid_reasons],
+  );
 
   const reset = (): void => {
     setResults(null);
@@ -230,13 +236,11 @@ export function IncidentsAnalysis(): ReactElement {
               </span>
             </div>
             
-            {Object.keys(results?.invalid_reasons ?? {}).length === 0 ? (
+            {sortedInvalidReasons.length === 0 ? (
               <p className="text-sm text-slate-500">No se encontraron problemas de validación.</p>
             ) : (
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-                {Object.entries(results?.invalid_reasons ?? {})
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([reason, count]) => (
+                {sortedInvalidReasons.map(([reason, count]) => (
                     <li key={reason} className="flex items-center justify-between p-4">
                       <span className="text-sm font-medium text-slate-700">{REASON_LABELS[reason] ?? reason}</span>
                       <span className="font-mono text-sm font-bold text-slate-900">{(count ?? 0).toLocaleString('es-ES')}</span>
