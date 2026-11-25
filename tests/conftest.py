@@ -13,6 +13,7 @@ from tinydb.storages import MemoryStorage
 import services.api.database as db_module
 import services.api.main as main_module
 import services.api.security as security_module
+from services.api.cache import app_cache
 from services.api.models import RoleEnum, UserDB
 from services.api.routes import auth as auth_routes
 from services.api.routes import profiles as profiles_routes
@@ -60,6 +61,7 @@ def memory_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(db_module, "engine", None)
     monkeypatch.setattr(main_module, "last_analysis", None)
+    app_cache.clear_all()
     db_module.init_db(sqlite_path)
 
     yield {

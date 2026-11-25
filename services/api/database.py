@@ -32,6 +32,7 @@ if str(_REPO_ROOT) not in sys.path:
 load_dotenv(_REPO_ROOT / ".env", override=False)
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
+from services.api.cache import app_cache  # noqa: E402
 from packages.shared.incident_rules import (  # noqa: E402
     VALID_BRANCHES,
     VALID_MODEL_CATEGORIES,
@@ -259,6 +260,7 @@ def create_incident(
             "FROM incidents WHERE id = ?",
             (incident_id,),
         ).fetchone()
+    app_cache.invalidate_prefix("incidents:")
     return _row_to_incident(row)
 
 
@@ -357,6 +359,7 @@ def update_incident_status(
             "FROM incidents WHERE id = ?",
             (incident_id,),
         ).fetchone()
+    app_cache.invalidate_prefix("incidents:")
     return _row_to_incident(row) if row is not None else None
 
 

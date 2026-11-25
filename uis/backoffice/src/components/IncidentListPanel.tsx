@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import {
@@ -56,6 +56,13 @@ function formatDate(isoString: string): string {
   });
 }
 
+const STATUS_PRIORITY_ORDER: Record<IncidentStatus, number> = {
+  open: 0,
+  in_progress: 1,
+  resolved: 2,
+  discarded: 3,
+};
+
 /** Panel de listado de incidencias con filtros y actualización de estado en tiempo real. */
 export function IncidentListPanel({
   refreshTrigger = 0,
@@ -65,6 +72,7 @@ export function IncidentListPanel({
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | ''>('');
   const [originFilter, setOriginFilter] = useState<IncidentOrigin | ''>('');
   const [branchFilter, setBranchFilter] = useState<IncidentBranch | ''>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -155,13 +163,67 @@ export function IncidentListPanel({
     }
   };
 
-  const hasActiveFilters = Boolean(statusFilter || originFilter || branchFilter);
+  const hasActiveFilters = Boolean(
+    statusFilter || originFilter || branchFilter || searchQuery.trim(),
+  );
 
   const resetFilters = (): void => {
     setStatusFilter('');
     setOriginFilter('');
     setBranchFilter('');
+    setSearchQuery('');
   };
+
+  // Memoiza el filtrado textual multi-campo, la ordenación por criticidad operativa y el desglose
+  // de carga activa para evitar recalcular O(N log N) cuando cambian updatingIds o statusFeedback.
+  const { visibleIncidents, activeCount, terminalCount } = useMemo(() => {
+    const tokens = searchQuery
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    const matched =
+      tokens.length === 0
+        ? incidents
+        : incidents.filter((item) => {
+            const searchableText = [
+              `#${item.id}`,
+              item.title,
+              item.description,
+              CATEGORY_LABELS[item.category] ?? item.category,
+              BRANCH_LABELS[item.branch] ?? item.branch,
+              ORIGIN_LABELS[item.origin] ?? item.origin,
+            ]
+              .join(' ')
+              .toLowerCase();
+            return tokens.every((token) => searchableText.includes(token));
+          });
+
+    const sorted = [...matched].sort((a, b) => {
+      const priorityDiff =
+        (STATUS_PRIORITY_ORDER[a.status] ?? 99) -
+        (STATUS_PRIORITY_ORDER[b.status] ?? 99);
+      if (priorityDiff !== 0) return priorityDiff;
+      return b.id - a.id;
+    });
+
+    let active = 0;
+    let terminal = 0;
+    for (const inc of sorted) {
+      if (inc.status === 'open' || inc.status === 'in_progress') {
+        active += 1;
+      } else {
+        terminal += 1;
+      }
+    }
+
+    return {
+      visibleIncidents: sorted,
+      activeCount: active,
+      terminalCount: terminal,
+    };
+  }, [incidents, searchQuery]);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -196,8 +258,21 @@ export function IncidentListPanel({
         </div>
       </div>
 
-      {/* Controles de filtro por status, origin y branch */}
-      <div className="mb-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:grid-cols-3">
+      {/* Controles de filtro por status, origin, branch y búsqueda textual */}
+      <div className="mb-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label htmlFor="filter-search-incident" className="block text-xs font-bold uppercase text-slate-600">
+            Buscar en resultados
+          </label>
+          <input
+            id="filter-search-incident"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Ej. #12, Zaragoza, avería..."
+            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-600"
+          />
+        </div>
         <div>
           <label htmlFor="filter-status" className="block text-xs font-bold uppercase text-slate-600">
             Filtrar por Estado (status)
@@ -314,7 +389,7 @@ export function IncidentListPanel({
         </div>
       ) : null}
 
-      {!isLoading && !errorMsg && incidents.length === 0 ? (
+      {!isLoading && !errorMsg && visibleIncidents.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-6 py-12 text-center">
           <p className="text-base font-bold text-slate-800">
             {hasActiveFilters
@@ -338,13 +413,21 @@ export function IncidentListPanel({
         </div>
       ) : null}
 
-      {!isLoading && !errorMsg && incidents.length > 0 ? (
+      {!isLoading && !errorMsg && visibleIncidents.length > 0 ? (
         <div>
-          <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
             <span>
-              Mostrando <strong className="text-slate-800">{incidents.length}</strong>{' '}
-              {incidents.length === 1 ? 'incidencia' : 'incidencias'}
+              Mostrando <strong className="text-slate-800">{visibleIncidents.length}</strong>{' '}
+              {visibleIncidents.length === 1 ? 'incidencia' : 'incidencias'} (ordenadas por prioridad operativa)
             </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-semibold text-amber-800">
+                Activas: {activeCount}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-semibold text-slate-700">
+                Cerradas: {terminalCount}
+              </span>
+            </div>
           </div>
           <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full border-collapse text-left text-sm">
@@ -358,7 +441,7 @@ export function IncidentListPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {incidents.map((item) => {
+                {visibleIncidents.map((item) => {
                   const allowedNext = ALLOWED_STATUS_TRANSITIONS[item.status] ?? [];
                   const isRowUpdating = Boolean(updatingIds[item.id]);
                   const selectableStatuses: IncidentStatus[] = [

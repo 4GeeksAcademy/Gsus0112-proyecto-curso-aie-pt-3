@@ -58,6 +58,8 @@ class SKUCreate(BaseModel):
 class SKUListItem(BaseModel):
     """Proyección plana y ligera para `GET /inventory/products` (omite `stock_by_warehouse`)."""
 
+    model_config = ConfigDict(frozen=True)
+
     id: int
     name: str
     sku: str
@@ -82,6 +84,8 @@ class SKUResponse(BaseModel):
 
 class SKUSummary(BaseModel):
     """Proyección ligera del SKU incrustada al listar órdenes en `GET /inventory/orders`."""
+
+    model_config = ConfigDict(frozen=True)
 
     id: int
     name: str
@@ -163,6 +167,8 @@ class StockExitResponse(BaseModel):
 
 class StockOrderResponse(BaseModel):
     """Movimiento consolidado de inventario con proyección `SKUSummary` (sin FK `sku_id` duplicada)."""
+
+    model_config = ConfigDict(frozen=True)
 
     id: int
     order_type: OrderMovementType

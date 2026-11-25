@@ -1,11 +1,39 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 
-import { IncidentListPanel } from './IncidentListPanel';
-import { IncidentRegistrationForm } from './IncidentRegistrationForm';
 import { IncidentSummaryPanel } from './IncidentSummaryPanel';
+
+const IncidentRegistrationForm = dynamic(
+  () =>
+    import('./IncidentRegistrationForm').then((mod) => mod.IncidentRegistrationForm),
+  {
+    loading: () => (
+      <div
+        aria-busy="true"
+        className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm"
+      >
+        Cargando formulario de registro de incidencias...
+      </div>
+    ),
+  },
+);
+
+const IncidentListPanel = dynamic(
+  () => import('./IncidentListPanel').then((mod) => mod.IncidentListPanel),
+  {
+    loading: () => (
+      <div
+        aria-busy="true"
+        className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm"
+      >
+        Cargando panel interactivo de incidencias...
+      </div>
+    ),
+  },
+);
 
 type ViewMode = 'all' | 'register' | 'list' | 'summary';
 

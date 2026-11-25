@@ -18,6 +18,11 @@ from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, col, func, select
 
+from ..cache import (
+    INVENTORY_ORDERS_TTL_SECONDS,
+    INVENTORY_PRODUCTS_TTL_SECONDS,
+    app_cache,
+)
 from ..database import get_db
 from ..models import SKU, StockEntry, StockExit, UserDB
 from ..schemas import (
@@ -176,7 +181,12 @@ def list_products(
     warehouse: WarehouseCode | None = None,
     session: Session = Depends(get_db),
 ) -> list[SKUListItem]:
-    """Lista todos los SKUs en proyección ligera (`SKUListItem`) sin incurrir en N+1."""
+    """Lista todos los SKUs en proyección ligera (`SKUListItem`) sin incurrir en N+1, con caché TTL."""
+    cache_key = f"inventory:products:{warehouse or 'ALL'}"
+    hit, cached_items = app_cache.get(cache_key)
+    if hit:
+        return cached_items
+
     stmt = select(SKU).order_by(col(SKU.id))
     if warehouse is not None:
         stmt = stmt.where(SKU.warehouse == warehouse)
@@ -184,7 +194,9 @@ def list_products(
     skus = list(session.exec(stmt).all())
     sku_ids = [s.id for s in skus if s.id is not None]
     stock_map = _compute_stock_map(session, sku_ids)
-    return [_build_sku_list_item(sku_obj, stock_map) for sku_obj in skus]
+    items = [_build_sku_list_item(sku_obj, stock_map) for sku_obj in skus]
+    app_cache.set(cache_key, items, ttl_seconds=INVENTORY_PRODUCTS_TTL_SECONDS)
+    return items
 
 
 @router.post(
@@ -222,6 +234,7 @@ def create_product(
     session.add(new_sku)
     session.commit()
     session.refresh(new_sku)
+    app_cache.invalidate_prefix("inventory:")
     return _build_sku_response(new_sku, {})
 
 
@@ -269,6 +282,7 @@ def create_inbound_order(
     session.add(entry)
     session.commit()
     session.refresh(entry)
+    app_cache.invalidate_prefix("inventory:")
 
     if entry.id is None:
         raise HTTPException(
@@ -326,6 +340,7 @@ def create_outbound_order(
     session.add(exit_record)
     session.commit()
     session.refresh(exit_record)
+    app_cache.invalidate_prefix("inventory:")
 
     if exit_record.id is None:
         raise HTTPException(
@@ -350,7 +365,12 @@ def list_orders(
     warehouse: WarehouseCode | None = None,
     session: Session = Depends(get_db),
 ) -> list[StockOrderResponse]:
-    """Lista todas las órdenes (`StockEntry` y `StockExit`) precargando `SKU` mediante SQL JOIN (sin N+1)."""
+    """Lista todas las órdenes (`StockEntry` y `StockExit`) precargando `SKU` mediante SQL JOIN y caché TTL."""
+    cache_key = f"inventory:orders:{warehouse or 'ALL'}"
+    hit, cached_orders = app_cache.get(cache_key)
+    if hit:
+        return cached_orders
+
     entry_stmt = select(StockEntry, SKU).join(SKU, col(StockEntry.sku_id) == col(SKU.id))
     exit_stmt = select(StockExit, SKU).join(SKU, col(StockExit.sku_id) == col(SKU.id))
 
@@ -403,4 +423,5 @@ def list_orders(
         key=lambda item: (_sort_timestamp(item.created_at), item.id),
         reverse=True,
     )
+    app_cache.set(cache_key, orders, ttl_seconds=INVENTORY_ORDERS_TTL_SECONDS)
     return orders
